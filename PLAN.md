@@ -2,7 +2,7 @@
 
 ## Game Design Vision
 
-A geolocation based token collection game, inspired by Pokemon Go and 4096/Threes. The world is a rectilinear grid. Players can see all cells globally but may only interact with cells near them. Players can hold at most one token at a time, collect from nearby cells, and combine two tokens of the same value to craft the next higher value. Players start with 1 token and have collect enough tokens to craft a token with the value of 256 to win.
+A geolocation based token collection game, inspired by Pokemon Go and 4096/Threes. The Earth is divided into rectilinear grid. Each cell may contain at most one token. Players can see all cells on the current map view but can only interact with nearby cells. Players can hold at most one token at a time, collect from nearby cells, and combine two tokens of the same value to craft the next higher value. Players start with 1 token and have collect enough tokens to craft a token with the value of 256 to win.
 
 ## Technologies
 
@@ -14,8 +14,8 @@ A geolocation based token collection game, inspired by Pokemon Go and 4096/Three
 
 ### D3.a: Core mechanics (token collection and crafting)
 
-Key technical challenge: Can you assemble a map-based user interface using the Leaflet mapping framework?
-Key gameplay challenge: Can players collect and craft tokens from nearby locations to finally make one of sufficiently high value?
+Key technical challenge: Assemble a map-based user interface using the Leaflet mapping framework.
+Key gameplay challenge: Players tokens collection and crafting system. Can players craft an even higher value token by moving to other locations to get access to additional crafting materials?
 
 #### Steps
 
