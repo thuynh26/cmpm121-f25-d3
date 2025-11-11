@@ -22,10 +22,14 @@ Key gameplay challenge: Players tokens collection and crafting system. Can playe
 - [x] copy main.ts to reference.ts for future reference
 - [x] delete everything in main.ts
 - [x] put a basic leaflet map on the screen
-- [ ] draw the player's location on the map
+- [x] draw the player's location on the map
 - [ ] draw a rectangle representing one cell on the map
+- [ ] implement grid index and convet lat/lng to cell sizes
 - [ ] use loops to draw a whole grid of cells on the map
-- ...
+- [ ] implment cell render system (cells cover current map bounds)
+- [ ] add token spawns to cells
+- [ ] add player and cell tokens interaction
+- [ ] implement interaction rule (can only interact with nearby cells)
 
 ### D3.b: Globe-spanning Gameplay
 
