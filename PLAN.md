@@ -23,7 +23,7 @@ Key gameplay challenge: Players tokens collection and crafting system. Can playe
 - [x] delete everything in main.ts
 - [x] put a basic leaflet map on the screen
 - [x] draw the player's location on the map
-- [ ] draw a rectangle representing one cell on the map
+- [x] draw a rectangle representing one cell on the map
 - [ ] implement grid index and convet lat/lng to cell sizes
 - [ ] use loops to draw a whole grid of cells on the map
 - [ ] implment cell render system (cells cover current map bounds)

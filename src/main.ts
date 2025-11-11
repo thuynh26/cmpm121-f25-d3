@@ -15,6 +15,7 @@ import "./_leafletWorkaround.ts";
 // Map center is set to classroom
 const MAP_CENTER = leaflet.latLng(36.997936938057016, -122.05703507501151);
 const GAMEPLAY_ZOOM_LVL = 20;
+// const TILE_DEG = 1e-4;
 
 // =============== UI ELEMENTS =============== //
 
@@ -39,3 +40,12 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 const playerMarker = leaflet.marker(MAP_CENTER);
 playerMarker.bindTooltip("That's you!");
 playerMarker.addTo(map);
+
+// add rectangle to map (represents token cell)
+// const origin = MAP_CENTER;
+const bounds = leaflet.latLngBounds([
+  [36.997936938057016, -122.05703507501151],
+  [36.998036938057014, -122.0569350750115],
+]);
+const rect = leaflet.rectangle(bounds);
+rect.addTo(map);
