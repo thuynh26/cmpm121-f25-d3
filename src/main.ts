@@ -12,8 +12,9 @@ import "./_leafletWorkaround.ts";
 // import luck from "./_luck.ts"
 
 // =============== GAME PARAMETERS =============== //
-const MAP_CENTER = leaflet.latLng(0, 0);
-const GAMEPLAY_ZOOM_LVL = 1;
+// Map center is set to classroom
+const MAP_CENTER = leaflet.latLng(36.997936938057016, -122.05703507501151);
+const GAMEPLAY_ZOOM_LVL = 20;
 
 // =============== UI ELEMENTS =============== //
 
@@ -27,8 +28,14 @@ const map = leaflet.map(mapDiv, {
   zoom: GAMEPLAY_ZOOM_LVL,
 });
 
+// adds a bkgd tile layer to map
 leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution:
     '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 }).addTo(map);
+
+// map marker to represent the player
+const playerMarker = leaflet.marker(MAP_CENTER);
+playerMarker.bindTooltip("That's you!");
+playerMarker.addTo(map);
