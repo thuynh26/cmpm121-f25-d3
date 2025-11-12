@@ -23,6 +23,7 @@ const TOKEN_SPAWN_PROB = 0.10;
 const GRID_SIZE = 28;
 
 const PICKUP_RANGE = 3;
+const WIN_CONDITION = 16;
 
 // ============================== UI ELEMENTS ============================== //
 
@@ -108,9 +109,15 @@ let holdToken: number | null = null;
 function updateInventoryUI(msg?: string) {
   const held = holdToken == null ? "(empty)" : String(holdToken);
   inventoryDiv.textContent = `Inventory: ${held}${msg ? "  --  " + msg : ""}`;
+  checkWinCondit();
 }
 
-updateInventoryUI();
+function checkWinCondit() {
+  if (holdToken === WIN_CONDITION) {
+    inventoryDiv.textContent = `Inventory: ${holdToken}  --  🎉 Goal reached!!`;
+    alert("CONGRATS YOU WIN!");
+  }
+}
 
 // ============================== MAP GRID ============================== //
 function cellBounds(i: number, j: number) {
@@ -123,6 +130,8 @@ function cellBounds(i: number, j: number) {
   const lng1 = lng0 + TILE_DEGREES;
   return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
 }
+
+updateInventoryUI();
 
 for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
   for (let j = -GRID_SIZE; j < GRID_SIZE; j++) {
