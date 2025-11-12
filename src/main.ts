@@ -14,9 +14,11 @@ import "./_leafletWorkaround.ts";
 // ============================== GAME PARAMETERS ============================== //
 // Map center is set to classroom
 const MAP_CENTER = leaflet.latLng(36.997936938057016, -122.05703507501151);
-const GAMEPLAY_ZOOM_LVL = 20;
+const GAMEPLAY_ZOOM_LVL = 19;
 const TILE_DEGREES = 1e-4;
-const GRID_SIZE = 13;
+
+// temp for D3.a use (so that map covers viewable screen)
+const GRID_SIZE = 18;
 
 // ============================== UI ELEMENTS ============================== //
 
@@ -28,6 +30,10 @@ document.body.append(mapDiv);
 const map = leaflet.map(mapDiv, {
   center: MAP_CENTER,
   zoom: GAMEPLAY_ZOOM_LVL,
+  minZoom: GAMEPLAY_ZOOM_LVL,
+  maxZoom: GAMEPLAY_ZOOM_LVL,
+  zoomControl: false,
+  scrollWheelZoom: false,
 });
 
 // adds a bkgd tile layer to map
@@ -41,6 +47,21 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 const playerMarker = leaflet.marker(MAP_CENTER);
 playerMarker.addTo(map).bindTooltip("That's you!");
 
+// ============================== TOKEN SYSTEM ============================== //
+function spawnToken() {
+  const spawned = Math.random() < 0.12;
+  const value = spawned ? (Math.random() < 0.5 ? 0 : 1) : null;
+
+  return value;
+}
+
+function addTokenLabel(i: number, j: number, value: number): leaflet.Marker {
+  const center = cellBounds(i, j).getCenter();
+  return leaflet.marker(center, {
+    opacity: 0.5,
+  }).addTo(map).bindTooltip(`${value}`);
+}
+
 // ============================== MAP GRID ============================== //
 function cellBounds(i: number, j: number) {
   // SW corner (lower-left)
@@ -53,9 +74,17 @@ function cellBounds(i: number, j: number) {
   return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
 }
 
-for (let i = -GRID_SIZE; i < GRID_SIZE; i++) {
+for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
   for (let j = -GRID_SIZE; j < GRID_SIZE; j++) {
-    const cell = leaflet.rectangle(cellBounds(i, j));
+    const cell = leaflet.rectangle(cellBounds(i, j), {
+      weight: 1,
+      fillOpacity: 0.04,
+    });
     cell.addTo(map);
+
+    const tokenValue = spawnToken();
+    if (tokenValue != null) {
+      addTokenLabel(i, j, tokenValue);
+    }
   }
 }
