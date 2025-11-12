@@ -164,6 +164,13 @@ for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
         }
 
         // case: craft token (combine held token with ground token if same value)
+        if (holdToken === tokenValue) {
+          tokenValue = tokenValue * 2;
+          holdToken = null;
+          setTokenLabel(label, tokenValue);
+          updateInventoryUI(`Crafted new token: ${tokenValue}`);
+          return;
+        }
 
         // block picking up if values differ
         updateInventoryUI(`Cell has ${tokenValue}. Need equal to craft.`);
