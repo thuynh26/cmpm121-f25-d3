@@ -16,6 +16,7 @@ import "./_leafletWorkaround.ts";
 const MAP_CENTER = leaflet.latLng(36.997936938057016, -122.05703507501151);
 const GAMEPLAY_ZOOM_LVL = 20;
 const TILE_DEGREES = 1e-4;
+const GRID_SIZE = 13;
 
 // ============================== UI ELEMENTS ============================== //
 
@@ -52,11 +53,9 @@ function cellBounds(i: number, j: number) {
   return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
 }
 
-const rect1 = leaflet.rectangle(cellBounds(0, 0));
-rect1.addTo(map);
-const rect2 = leaflet.rectangle(cellBounds(0, 1));
-rect2.addTo(map);
-const rect3 = leaflet.rectangle(cellBounds(1, 0));
-rect3.addTo(map);
-const rect4 = leaflet.rectangle(cellBounds(1, 1));
-rect4.addTo(map);
+for (let i = -GRID_SIZE; i < GRID_SIZE; i++) {
+  for (let j = -GRID_SIZE; j < GRID_SIZE; j++) {
+    const cell = leaflet.rectangle(cellBounds(i, j));
+    cell.addTo(map);
+  }
+}
