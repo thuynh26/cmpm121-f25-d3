@@ -11,11 +11,6 @@ import "./_leafletWorkaround.ts";
 // Import our luck/RNG function
 import luck from "./_luck.ts";
 
-/* SCRAPPED FOR NOW
-import coin1Url from "./coin1.png";
-import coin2Url from "./coin2.png";
-*/
-
 // ============================== GAME PARAMETERS ============================== //
 // Map center is set to classroom
 const MAP_CENTER = leaflet.latLng(36.997936938057016, -122.05703507501151);
@@ -27,19 +22,7 @@ const TOKEN_SPAWN_PROB = 0.10;
 // temp for D3.a use (so that map covers viewable screen)
 const GRID_SIZE = 28;
 
-/* SCRAPPED FOR NOW
-const tokenIcon1 = leaflet.icon({
-  iconUrl: coin1Url,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-});
-
-const tokenIcon2 = leaflet.icon({
-  iconUrl: coin2Url,
-  iconSize: [30, 30],
-  iconAnchor: [15, 15],
-});
-*/
+const PICKUP_RANGE = 3;
 
 // ============================== UI ELEMENTS ============================== //
 
@@ -75,9 +58,9 @@ playerMarker.addTo(map).bindTooltip("That's you!");
 
 // ============================== TOKEN SYSTEM ============================== //
 function spawnToken(i: number, j: number) {
-  const spawnRoll = luck([i, j].toString());
+  const spawnRoll = luck(`${i},${j}:value`);
 
-  const value = spawnRoll ? (Math.random() < 0.5 ? 2 : 4) : 0;
+  const value = spawnRoll < 0.5 ? 2 : 4;
   return value;
 }
 
@@ -104,6 +87,22 @@ function setTokenLabel(label: leaflet.Marker, value: number) {
 
 // ============================== INTERACTION SYSTEM ============================== //
 
+// Convert lat/lng to integer cell indices relative to MAP_CENTER
+function latLngToCell(lat: number, lng: number) {
+  const i = Math.floor((lat - MAP_CENTER.lat) / TILE_DEGREES);
+  const j = Math.floor((lng - MAP_CENTER.lng) / TILE_DEGREES);
+  return { i, j };
+}
+
+// Player cell (fixed at classroom for now)
+const playerCell = latLngToCell(MAP_CENTER.lat, MAP_CENTER.lng);
+
+function isInRange(i: number, j: number) {
+  return (
+    Math.abs(i - playerCell.i) + Math.abs(j - playerCell.j) <= PICKUP_RANGE
+  );
+}
+
 // ============================== MAP GRID ============================== //
 function cellBounds(i: number, j: number) {
   // SW corner (lower-left)
@@ -119,8 +118,11 @@ function cellBounds(i: number, j: number) {
 for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
   for (let j = -GRID_SIZE; j < GRID_SIZE; j++) {
     if (luck([i, j].toString()) < TOKEN_SPAWN_PROB) {
+      const nearby = isInRange(i, j);
+
       const cell = leaflet.rectangle(cellBounds(i, j), {
         weight: 1,
+        color: nearby ? "#2987dfff" : "#888",
       });
       cell.addTo(map);
 
@@ -128,6 +130,11 @@ for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
       const label = addTokenLabel(i, j, tokenValue);
 
       cell.on("click", () => {
+        if (!isInRange(i, j)) {
+          cell.bindTooltip("Too far!");
+          return;
+        }
+
         tokenValue = 0;
         setTokenLabel(label, tokenValue);
       });
