@@ -11,8 +11,10 @@ import "./_leafletWorkaround.ts";
 // Import our luck/RNG function
 import luck from "./_luck.ts";
 
+/* SCRAPPED FOR NOW
 import coin1Url from "./coin1.png";
 import coin2Url from "./coin2.png";
+*/
 
 // ============================== GAME PARAMETERS ============================== //
 // Map center is set to classroom
@@ -24,6 +26,7 @@ const TOKEN_SPAWN_PROB = 0.10;
 // temp for D3.a use (so that map covers viewable screen)
 const GRID_SIZE = 28;
 
+/* SCRAPPED FOR NOW
 const tokenIcon1 = leaflet.icon({
   iconUrl: coin1Url,
   iconSize: [30, 30],
@@ -35,12 +38,17 @@ const tokenIcon2 = leaflet.icon({
   iconSize: [30, 30],
   iconAnchor: [15, 15],
 });
+*/
 
 // ============================== UI ELEMENTS ============================== //
 
 const mapDiv = document.createElement("div");
 mapDiv.id = "map";
 document.body.append(mapDiv);
+
+const inventoryDiv = document.createElement("div");
+inventoryDiv.id = "inventory";
+document.body.append(inventoryDiv);
 
 // ============================== LEAFLET MAP ============================== //
 const map = leaflet.map(mapDiv, {
@@ -67,7 +75,7 @@ playerMarker.addTo(map).bindTooltip("That's you!");
 function spawnToken(i: number, j: number) {
   const spawnRoll = luck([i, j].toString());
 
-  const value = spawnRoll ? (Math.random() < 0.5 ? 1 : 2) : 0;
+  const value = spawnRoll ? (Math.random() < 0.5 ? 2 : 4) : 0;
 
   addTokenLabel(i, j, value);
   return value;
@@ -75,11 +83,14 @@ function spawnToken(i: number, j: number) {
 
 function addTokenLabel(i: number, j: number, value: number): leaflet.Marker {
   const center = cellBounds(i, j).getCenter();
-  const icon = value === 1 ? tokenIcon1 : value === 2 ? tokenIcon2 : tokenIcon1;
 
   return leaflet.marker(center, {
-    icon: icon,
-  }).addTo(map).bindTooltip(`${value}`);
+    interactive: false,
+    icon: leaflet.divIcon({
+      className: "token-text",
+      html: `<span class="token-pill">${value}</span>`,
+    }),
+  }).addTo(map);
 }
 
 // ============================== MAP GRID ============================== //
@@ -99,7 +110,6 @@ for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
     if (luck([i, j].toString()) < TOKEN_SPAWN_PROB) {
       const cell = leaflet.rectangle(cellBounds(i, j), {
         weight: 1,
-        fillOpacity: 0.04,
       });
       cell.addTo(map);
 
