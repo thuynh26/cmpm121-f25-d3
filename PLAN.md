@@ -24,15 +24,17 @@ Key gameplay challenge: Players tokens collection and crafting system. Can playe
 - [x] put a basic leaflet map on the screen
 - [x] draw the player's location on the map
 - [x] draw a rectangle representing one cell on the map
-- [ ] implement grid index and convet lat/lng to cell sizes
-- [ ] use loops to draw a whole grid of cells on the map
-- [ ] implment cell render system (cells cover current map bounds)
+- [x] implement grid index and convet lat/lng to cell sizes
+- [x] use loops to draw a whole grid of cells on the map
 - [ ] add token spawns to cells
+- [ ] implement token spawn logic (using _luck.ts)
 - [ ] add player and cell tokens interaction
 - [ ] implement interaction rule (can only interact with nearby cells)
 
 ### D3.b: Globe-spanning Gameplay
 
-...
+#### Steps
+
+- [ ] implment cell render system (cells cover CURRENT map bounds)
 
 ### 
