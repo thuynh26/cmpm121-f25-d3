@@ -145,15 +145,28 @@ for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
           return;
         }
 
-        if (holdToken != null) {
-          updateInventoryUI("You're already holding a token");
+        // case: not holding anything -> pick up token
+        if (holdToken == null) {
+          holdToken = tokenValue;
+          tokenValue = 0;
+          setTokenLabel(label, tokenValue);
+          updateInventoryUI(`Picked up ${holdToken}`);
           return;
         }
 
-        holdToken = tokenValue;
-        tokenValue = 0;
-        setTokenLabel(label, tokenValue);
-        updateInventoryUI(`Picked up ${holdToken}`);
+        // case: holding a token already -> place on cell if EMPTY
+        if (tokenValue === 0) {
+          tokenValue = holdToken;
+          holdToken = null;
+          setTokenLabel(label, tokenValue);
+          updateInventoryUI(`Placed down ${tokenValue}`);
+          return;
+        }
+
+        // case: craft token (combine held token with ground token if same value)
+
+        // block picking up if values differ
+        updateInventoryUI(`Cell has ${tokenValue}. Need equal to craft.`);
       });
     }
   }
