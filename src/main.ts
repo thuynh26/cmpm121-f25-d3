@@ -8,14 +8,15 @@ import "./style.css";
 // Leaflet missing marker imgs fix
 import "./_leafletWorkaround.ts";
 
-// Import our luck/RNG function -- unused for now
-// import luck from "./_luck.ts"
+// Import our luck/RNG function
+import luck from "./_luck.ts";
 
 // ============================== GAME PARAMETERS ============================== //
 // Map center is set to classroom
 const MAP_CENTER = leaflet.latLng(36.997936938057016, -122.05703507501151);
 const GAMEPLAY_ZOOM_LVL = 19;
 const TILE_DEGREES = 1e-4;
+const TOKEN_SPAWN_PROB = 0.1;
 
 // temp for D3.a use (so that map covers viewable screen)
 const GRID_SIZE = 18;
@@ -48,10 +49,11 @@ const playerMarker = leaflet.marker(MAP_CENTER);
 playerMarker.addTo(map).bindTooltip("That's you!");
 
 // ============================== TOKEN SYSTEM ============================== //
-function spawnToken() {
-  const spawned = Math.random() < 0.12;
-  const value = spawned ? (Math.random() < 0.5 ? 0 : 1) : null;
+function spawnToken(i: number, j: number): number | null {
+  const spawnRoll = luck([i, j].toString());
+  if (spawnRoll >= TOKEN_SPAWN_PROB) return null;
 
+  const value = spawnRoll ? (Math.random() < 0.5 ? 0 : 1) : null;
   return value;
 }
 
@@ -76,15 +78,17 @@ function cellBounds(i: number, j: number) {
 
 for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
   for (let j = -GRID_SIZE; j < GRID_SIZE; j++) {
-    const cell = leaflet.rectangle(cellBounds(i, j), {
-      weight: 1,
-      fillOpacity: 0.04,
-    });
-    cell.addTo(map);
+    if (luck([i, j].toString()) < TOKEN_SPAWN_PROB) {
+      const cell = leaflet.rectangle(cellBounds(i, j), {
+        weight: 1,
+        fillOpacity: 0.04,
+      });
+      cell.addTo(map);
 
-    const tokenValue = spawnToken();
-    if (tokenValue != null) {
-      addTokenLabel(i, j, tokenValue);
+      const tokenValue = spawnToken(i, j);
+      if (tokenValue != null) {
+        addTokenLabel(i, j, tokenValue);
+      }
     }
   }
 }
