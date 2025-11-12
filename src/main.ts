@@ -20,6 +20,7 @@ import coin2Url from "./coin2.png";
 // Map center is set to classroom
 const MAP_CENTER = leaflet.latLng(36.997936938057016, -122.05703507501151);
 const GAMEPLAY_ZOOM_LVL = 19;
+
 const TILE_DEGREES = 1e-4;
 const TOKEN_SPAWN_PROB = 0.10;
 
@@ -48,6 +49,7 @@ document.body.append(mapDiv);
 
 const inventoryDiv = document.createElement("div");
 inventoryDiv.id = "inventory";
+inventoryDiv.textContent = "Held: (empty)";
 document.body.append(inventoryDiv);
 
 // ============================== LEAFLET MAP ============================== //
@@ -76,8 +78,6 @@ function spawnToken(i: number, j: number) {
   const spawnRoll = luck([i, j].toString());
 
   const value = spawnRoll ? (Math.random() < 0.5 ? 2 : 4) : 0;
-
-  addTokenLabel(i, j, value);
   return value;
 }
 
@@ -92,6 +92,17 @@ function addTokenLabel(i: number, j: number, value: number): leaflet.Marker {
     }),
   }).addTo(map);
 }
+
+function setTokenLabel(label: leaflet.Marker, value: number) {
+  label.setIcon(
+    leaflet.divIcon({
+      className: "token-text",
+      html: value > 0 ? `<span class="token-pill">${value}</span>` : "0",
+    }),
+  );
+}
+
+// ============================== INTERACTION SYSTEM ============================== //
 
 // ============================== MAP GRID ============================== //
 function cellBounds(i: number, j: number) {
@@ -113,7 +124,13 @@ for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
       });
       cell.addTo(map);
 
-      spawnToken(i, j);
+      let tokenValue = spawnToken(i, j);
+      const label = addTokenLabel(i, j, tokenValue);
+
+      cell.on("click", () => {
+        tokenValue = 0;
+        setTokenLabel(label, tokenValue);
+      });
     }
   }
 }
