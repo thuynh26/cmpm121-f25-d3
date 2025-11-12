@@ -32,7 +32,6 @@ document.body.append(mapDiv);
 
 const inventoryDiv = document.createElement("div");
 inventoryDiv.id = "inventory";
-inventoryDiv.textContent = "Held: (empty)";
 document.body.append(inventoryDiv);
 
 // ============================== LEAFLET MAP ============================== //
@@ -94,7 +93,7 @@ function latLngToCell(lat: number, lng: number) {
   return { i, j };
 }
 
-// Player cell (fixed at classroom for now)
+// Player cell (fixed at classroom)
 const playerCell = latLngToCell(MAP_CENTER.lat, MAP_CENTER.lng);
 
 function isInRange(i: number, j: number) {
@@ -102,6 +101,16 @@ function isInRange(i: number, j: number) {
     Math.abs(i - playerCell.i) + Math.abs(j - playerCell.j) <= PICKUP_RANGE
   );
 }
+
+// ============================== INVENTORY SYSTEM ============================== //
+let holdToken: number | null = null;
+
+function updateInventoryUI(msg?: string) {
+  const held = holdToken == null ? "(empty)" : String(holdToken);
+  inventoryDiv.textContent = `Inventory: ${held}${msg ? "  --  " + msg : ""}`;
+}
+
+updateInventoryUI();
 
 // ============================== MAP GRID ============================== //
 function cellBounds(i: number, j: number) {
@@ -129,14 +138,22 @@ for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
       let tokenValue = spawnToken(i, j);
       const label = addTokenLabel(i, j, tokenValue);
 
+      // token "pick up" handler
       cell.on("click", () => {
         if (!isInRange(i, j)) {
           cell.bindTooltip("Too far!");
           return;
         }
 
+        if (holdToken != null) {
+          updateInventoryUI("You're already holding a token");
+          return;
+        }
+
+        holdToken = tokenValue;
         tokenValue = 0;
         setTokenLabel(label, tokenValue);
+        updateInventoryUI(`Picked up ${holdToken}`);
       });
     }
   }
