@@ -31,9 +31,12 @@ Key gameplay challenge: Players tokens collection and crafting system. Can playe
 - [x] add token label/icon
 - [x] make cells clickable and update cell labels
 - [x] implement interaction rule (can only interact with nearby cells)
-- [ ] make inventory HUD: holds at most 1 token
-- [ ] update inventory when token is picked up
-- [ ] ...
+- [x] make inventory HUD
+- [x] update inventory when a token is picked up
+- [x] implement inventory constraint: can only hold 1 token
+- [ ] handle click on EMPTY cells to place held token
+- [ ] handle click on same value cells to craft higher token
+- [ ] implement win condition
 
 ### D3.b: Globe-spanning Gameplay
 
