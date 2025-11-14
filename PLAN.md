@@ -37,6 +37,7 @@ Key gameplay challenge: Players tokens collection and crafting system. Can playe
 - [x] handle click on EMPTY cells to place held token
 - [x] handle click on same value cells to craft higher token
 - [x] implement win condition
+- [x] refactor code
 
 ### D3.b: Globe-spanning Gameplay
 
