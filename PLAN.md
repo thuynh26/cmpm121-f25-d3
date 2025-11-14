@@ -15,7 +15,7 @@ A geolocation based token collection game, inspired by Pokemon Go and 4096/Three
 ### D3.a: Core mechanics (token collection and crafting)
 
 Key technical challenge: Assemble a map-based user interface using the Leaflet mapping framework.
-Key gameplay challenge: Players tokens collection and crafting system. Can players craft an even higher value token by moving to other locations to get access to additional crafting materials?
+Key gameplay challenge: Player tokens collection and crafting system. Can players craft an even higher value token by moving to other locations to get access to additional crafting materials?
 
 #### Steps
 
@@ -41,6 +41,17 @@ Key gameplay challenge: Players tokens collection and crafting system. Can playe
 
 ### D3.b: Globe-spanning Gameplay
 
+Key technical challenge: Allow player movement over grid with a global grid anchored rendering system. Grid should spawn/despawn based on viewport.
+Key gameplay challenge: Free map panning system also restricting cell interaction to player's location on map. Higher merge value and win condition threshold.
+
 #### Steps
 
-- [ ] implment cell render system (cells cover CURRENT map bounds)
+- [ ] add buttons for player movement
+- [ ] implement player movement in N, S, E, W directions
+- [ ] update marker to follow player position
+- [ ] update cell interaction rule to follow player position
+- [ ] anchor map grid at Null Island
+- [ ] introduce new data type for modeling grid cells?
+- [ ]
+  ...
+- [ ] raise win condition value
