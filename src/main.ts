@@ -13,7 +13,7 @@ import luck from "./_luck.ts";
 
 // ============================== GAME PARAMETERS ============================== //
 // Map center is set to classroom
-const MAP_CENTER = leaflet.latLng(36.997936938057016, -122.05703507501151);
+const MAP_CENTER = leaflet.latLng(0, 0);
 const GAMEPLAY_ZOOM_LVL = 19;
 
 const TILE_DEGREES = 1e-4;
@@ -22,13 +22,10 @@ const TOKEN_SPAWN_PROB = 0.10;
 // temp for D3.a use (so that map covers viewable screen)
 const GRID_SIZE = 28;
 
-// Player cell (fixed at classroom)
-const playerCell = latLngToCell(MAP_CENTER.lat, MAP_CENTER.lng);
 const PICKUP_RANGE = 3;
 const WIN_CONDITION = 16;
 
 // ============================== UI ELEMENTS ============================== //
-
 const mapDiv = document.createElement("div");
 mapDiv.id = "map";
 document.body.append(mapDiv);
@@ -74,9 +71,62 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 }).addTo(map);
 
+// ============================== MAP GRID ============================== //
+// Convert lat/lng to integer cell indices relative to MAP_CENTER
+function latLngToCell(lat: number, lng: number) {
+  const i = Math.floor((lat - MAP_CENTER.lat) / TILE_DEGREES);
+  const j = Math.floor((lng - MAP_CENTER.lng) / TILE_DEGREES);
+  return { i, j };
+}
+
+function cellBounds(i: number, j: number) {
+  // SW corner (lower-left)
+  const lat0 = MAP_CENTER.lat + i * TILE_DEGREES;
+  const lng0 = MAP_CENTER.lng + j * TILE_DEGREES;
+
+  // NE corner (upper-right)
+  const lat1 = lat0 + TILE_DEGREES;
+  const lng1 = lng0 + TILE_DEGREES;
+  return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
+}
+
+// ============================== INTERACTION SYSTEM ============================== //
 // map marker to represent the player
-const playerMarker = leaflet.marker(MAP_CENTER);
+let playerLocation = MAP_CENTER;
+// let playerCell = latLngToCell(playerLocation.lat, playerLocation.lng);
+
+const playerMarker = leaflet.marker(playerLocation);
 playerMarker.addTo(map).bindTooltip("That's you!");
+
+nButton.onclick = () => {
+  movePlayer(1, 0);
+};
+
+sButton.onclick = () => {
+  movePlayer(-1, 0);
+};
+
+eButton.onclick = () => {
+  movePlayer(0, 1);
+};
+
+wButton.onclick = () => {
+  movePlayer(0, -1);
+};
+
+function movePlayer(di: number, dj: number) {
+  playerLocation = leaflet.latLng(
+    playerLocation.lat + di * TILE_DEGREES,
+    playerLocation.lng + dj * TILE_DEGREES,
+  );
+  playerMarker.setLatLng(playerLocation);
+}
+
+function isInRange(i: number, j: number) {
+  return (
+    Math.abs(i - playerCell.i) + Math.abs(j - playerCell.j) <= PICKUP_RANGE
+  );
+}
 
 // ============================== TOKEN SYSTEM ============================== //
 function spawnToken(i: number, j: number) {
@@ -106,21 +156,6 @@ function setTokenLabel(label: leaflet.Marker, value: number) {
   label.setIcon(tokenIcon(value));
 }
 
-// ============================== INTERACTION SYSTEM ============================== //
-
-// Convert lat/lng to integer cell indices relative to MAP_CENTER
-function latLngToCell(lat: number, lng: number) {
-  const i = Math.floor((lat - MAP_CENTER.lat) / TILE_DEGREES);
-  const j = Math.floor((lng - MAP_CENTER.lng) / TILE_DEGREES);
-  return { i, j };
-}
-
-function isInRange(i: number, j: number) {
-  return (
-    Math.abs(i - playerCell.i) + Math.abs(j - playerCell.j) <= PICKUP_RANGE
-  );
-}
-
 // ============================== INVENTORY SYSTEM ============================== //
 let holdToken: number | null = null;
 
@@ -139,19 +174,7 @@ function checkWinCondit() {
   }
 }
 
-// ============================== MAP GRID ============================== //
-function cellBounds(i: number, j: number) {
-  // SW corner (lower-left)
-  const lat0 = MAP_CENTER.lat + i * TILE_DEGREES;
-  const lng0 = MAP_CENTER.lng + j * TILE_DEGREES;
-
-  // NE corner (upper-right)
-  const lat1 = lat0 + TILE_DEGREES;
-  const lng1 = lng0 + TILE_DEGREES;
-  return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
-}
-
-// ============================== HELPER FUNCTION ============================== //
+// ============================== HELPER FUNCTIONS ============================== //
 
 function cellClickHandler(
   cell: leaflet.Rectangle,
