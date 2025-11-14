@@ -22,6 +22,8 @@ const TOKEN_SPAWN_PROB = 0.10;
 // temp for D3.a use (so that map covers viewable screen)
 const GRID_SIZE = 28;
 
+// Player cell (fixed at classroom)
+const playerCell = latLngToCell(MAP_CENTER.lat, MAP_CENTER.lng);
 const PICKUP_RANGE = 3;
 const WIN_CONDITION = 16;
 
@@ -64,25 +66,24 @@ function spawnToken(i: number, j: number) {
   return value;
 }
 
+function tokenIcon(value: number) {
+  return leaflet.divIcon({
+    className: "token-text",
+    html: value > 0 ? `<span class="token-pill">${value}</span>` : "0",
+  });
+}
+
 function addTokenLabel(i: number, j: number, value: number): leaflet.Marker {
   const center = cellBounds(i, j).getCenter();
 
   return leaflet.marker(center, {
     interactive: false,
-    icon: leaflet.divIcon({
-      className: "token-text",
-      html: `<span class="token-pill">${value}</span>`,
-    }),
+    icon: tokenIcon(value),
   }).addTo(map);
 }
 
 function setTokenLabel(label: leaflet.Marker, value: number) {
-  label.setIcon(
-    leaflet.divIcon({
-      className: "token-text",
-      html: value > 0 ? `<span class="token-pill">${value}</span>` : "0",
-    }),
-  );
+  label.setIcon(tokenIcon(value));
 }
 
 // ============================== INTERACTION SYSTEM ============================== //
@@ -94,9 +95,6 @@ function latLngToCell(lat: number, lng: number) {
   return { i, j };
 }
 
-// Player cell (fixed at classroom)
-const playerCell = latLngToCell(MAP_CENTER.lat, MAP_CENTER.lng);
-
 function isInRange(i: number, j: number) {
   return (
     Math.abs(i - playerCell.i) + Math.abs(j - playerCell.j) <= PICKUP_RANGE
@@ -106,6 +104,7 @@ function isInRange(i: number, j: number) {
 // ============================== INVENTORY SYSTEM ============================== //
 let holdToken: number | null = null;
 
+// checks for win condition token value in inventory (not on board)
 function updateInventoryUI(msg?: string) {
   const held = holdToken == null ? "(empty)" : String(holdToken);
   inventoryDiv.textContent = `Inventory: ${held}${msg ? "  --  " + msg : ""}`;
@@ -114,7 +113,8 @@ function updateInventoryUI(msg?: string) {
 
 function checkWinCondit() {
   if (holdToken === WIN_CONDITION) {
-    inventoryDiv.textContent = `Inventory: ${holdToken}  --  🎉 Goal reached!!`;
+    inventoryDiv.textContent =
+      `Inventory: ${holdToken}  --  Yayyy Goal reached!!`;
     alert("CONGRATS YOU WIN!");
   }
 }
@@ -131,6 +131,52 @@ function cellBounds(i: number, j: number) {
   return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
 }
 
+// ============================== HELPER FUNCTION ============================== //
+
+function cellClickHandler(
+  cell: leaflet.Rectangle,
+  i: number,
+  j: number,
+  cellState: { tokenValue: number },
+  label: leaflet.Marker,
+) {
+  if (!isInRange(i, j)) {
+    cell.bindTooltip("Too far!");
+    return;
+  }
+
+  // case: not holding anything -> pick up token
+  if (holdToken == null) {
+    holdToken = cellState.tokenValue;
+    cellState.tokenValue = 0;
+    setTokenLabel(label, cellState.tokenValue);
+    updateInventoryUI(`Picked up ${holdToken}`);
+    return;
+  }
+
+  // case: holding a token already -> place on cell if EMPTY
+  if (cellState.tokenValue === 0) {
+    cellState.tokenValue = holdToken;
+    holdToken = null;
+    setTokenLabel(label, cellState.tokenValue);
+    updateInventoryUI(`Placed down ${cellState.tokenValue}`);
+    return;
+  }
+
+  // case: craft token (combine held token with ground token if same value)
+  if (holdToken === cellState.tokenValue) {
+    cellState.tokenValue = cellState.tokenValue * 2;
+    holdToken = null;
+    setTokenLabel(label, cellState.tokenValue);
+    updateInventoryUI(`Crafted new token: ${cellState.tokenValue}`);
+    return;
+  }
+
+  // block picking up if values differ
+  updateInventoryUI(`Cell has ${cellState.tokenValue}. Need equal to craft.`);
+}
+
+// ============================== BUILD CELLS ============================== //
 updateInventoryUI();
 
 for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
@@ -140,50 +186,15 @@ for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
 
       const cell = leaflet.rectangle(cellBounds(i, j), {
         weight: 1,
-        color: nearby ? "#2987dfff" : "#888",
+        color: nearby ? "#2987dfff" : "#2f2b50ff",
       });
       cell.addTo(map);
 
-      let tokenValue = spawnToken(i, j);
-      const label = addTokenLabel(i, j, tokenValue);
+      const cellState = { tokenValue: spawnToken(i, j) };
+      const label = addTokenLabel(i, j, cellState.tokenValue);
 
       // token "pick up" handler
-      cell.on("click", () => {
-        if (!isInRange(i, j)) {
-          cell.bindTooltip("Too far!");
-          return;
-        }
-
-        // case: not holding anything -> pick up token
-        if (holdToken == null) {
-          holdToken = tokenValue;
-          tokenValue = 0;
-          setTokenLabel(label, tokenValue);
-          updateInventoryUI(`Picked up ${holdToken}`);
-          return;
-        }
-
-        // case: holding a token already -> place on cell if EMPTY
-        if (tokenValue === 0) {
-          tokenValue = holdToken;
-          holdToken = null;
-          setTokenLabel(label, tokenValue);
-          updateInventoryUI(`Placed down ${tokenValue}`);
-          return;
-        }
-
-        // case: craft token (combine held token with ground token if same value)
-        if (holdToken === tokenValue) {
-          tokenValue = tokenValue * 2;
-          holdToken = null;
-          setTokenLabel(label, tokenValue);
-          updateInventoryUI(`Crafted new token: ${tokenValue}`);
-          return;
-        }
-
-        // block picking up if values differ
-        updateInventoryUI(`Cell has ${tokenValue}. Need equal to craft.`);
-      });
+      cell.on("click", () => cellClickHandler(cell, i, j, cellState, label));
     }
   }
 }
