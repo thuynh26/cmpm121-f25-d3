@@ -93,7 +93,7 @@ function cellBounds(i: number, j: number) {
 // ============================== INTERACTION SYSTEM ============================== //
 // map marker to represent the player
 let playerLocation = MAP_CENTER;
-// let playerCell = latLngToCell(playerLocation.lat, playerLocation.lng);
+const playerCell = latLngToCell(playerLocation.lat, playerLocation.lng);
 
 const playerMarker = leaflet.marker(playerLocation);
 playerMarker.addTo(map).bindTooltip("That's you!");

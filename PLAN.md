@@ -46,12 +46,12 @@ Key gameplay challenge: Free map panning system also restricting cell interactio
 
 #### Steps
 
-- [ ] add buttons for player movement
-- [ ] implement player movement in N, S, E, W directions
-- [ ] update marker to follow player position
-- [ ] update cell interaction rule to follow player position
-- [ ] anchor map grid at Null Island
+- [x] add buttons for player movement
+- [x] implement player movement in N, S, E, W directions
+- [x] anchor map grid at Null Island
+- [x] update marker to follow player position
 - [ ] introduce new data type for modeling grid cells?
+- [ ] update cell interaction rule to follow player position
 - [ ]
   ...
 - [ ] raise win condition value
