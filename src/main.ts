@@ -33,6 +33,26 @@ const mapDiv = document.createElement("div");
 mapDiv.id = "map";
 document.body.append(mapDiv);
 
+const nButton = document.createElement("button");
+nButton.innerHTML = "North";
+nButton.id = "buttons";
+document.body.append(nButton);
+
+const sButton = document.createElement("button");
+sButton.innerHTML = "South";
+sButton.id = "buttons";
+document.body.append(sButton);
+
+const eButton = document.createElement("button");
+eButton.innerHTML = "East";
+eButton.id = "buttons";
+document.body.append(eButton);
+
+const wButton = document.createElement("button");
+wButton.innerHTML = "West";
+wButton.id = "buttons";
+document.body.append(wButton);
+
 const inventoryDiv = document.createElement("div");
 inventoryDiv.id = "inventory";
 document.body.append(inventoryDiv);
