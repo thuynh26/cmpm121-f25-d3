@@ -121,7 +121,7 @@ function drawGrid() {
 
         let layer = mapLayers.get(id);
 
-        // only draw if not already drawn
+        // only draw cells if not already drawn
         if (!layer) {
           const cell = leaflet.rectangle(cellBounds(i, j), {
             weight: 1,
@@ -141,6 +141,11 @@ function drawGrid() {
             "click",
             () => cellClickHandler(cell, i, j, cellState, label),
           );
+        } else {
+          // update cell style if player moves
+          layer.rect.setStyle({
+            color: nearby ? "#2987dfff" : "#2f2b50ff",
+          });
         }
       }
     }
@@ -190,6 +195,8 @@ function movePlayer(di: number, dj: number) {
     MAP_CENTER.lng + playerCell.j * TILE_DEGREES + TILE_DEGREES / 2,
   );
   playerMarker.setLatLng(playerLocation);
+
+  drawGrid();
 }
 
 function isInRange(i: number, j: number) {
