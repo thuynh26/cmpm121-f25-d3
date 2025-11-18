@@ -147,6 +147,17 @@ function drawGrid() {
   }
 
   // remove cells that are not in view
+  for (const id of mapLayers.keys()) {
+    if (!seen.has(id)) {
+      const layer = mapLayers.get(id);
+      if (!layer) return;
+      layer.rect.remove();
+      layer.label.remove();
+      mapLayers.delete(id);
+
+      console.log(`Removed cell ${id}`);
+    }
+  }
 }
 
 // ============================== INTERACTION SYSTEM ============================== //
