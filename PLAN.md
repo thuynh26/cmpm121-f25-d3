@@ -57,9 +57,9 @@ Key gameplay challenge: Free map panning system also restricting cell interactio
 - [x] hook rendering to map interaction/location change
 - [x] track cells that are on/off current map view
 - [x] implement logic to remove cells that are not in currnet view
-- [ ] fix player marker (to be in center of cells instead of on a corner)
-- [ ] update cell interaction rule to follow player position as they move
-- [ ] "forget" off screen cell states
+- [x] fix player marker (to be in center of cells instead of on a corner)
+- [x] update cell interaction rule to follow player position as they move
+- [x] "forget" off screen cell states
 - [ ] re-entering a cell view resets to initial cell value
 - [ ] refactor map grid code
 - [ ] refactor click handler code
