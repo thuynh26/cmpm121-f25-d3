@@ -162,24 +162,32 @@ function drawGrid() {
 
 // ============================== INTERACTION SYSTEM ============================== //
 // map marker to represent the player
-let playerLocation = MAP_CENTER;
-const playerCell = latLngToCell(playerLocation.lat, playerLocation.lng);
+// spawn player at map center index
+let playerCell = { i: 0, j: 0 };
+
+// put player in center of cell
+let playerLocation = leaflet.latLng(
+  MAP_CENTER.lat + playerCell.i * TILE_DEGREES + TILE_DEGREES / 2,
+  MAP_CENTER.lng + playerCell.j * TILE_DEGREES + TILE_DEGREES / 2,
+);
 
 const playerMarker = leaflet.marker(playerLocation);
 playerMarker.addTo(map).bindTooltip("That's you!");
 
 nButton.onclick = () => movePlayer(1, 0);
-
 sButton.onclick = () => movePlayer(-1, 0);
-
 eButton.onclick = () => movePlayer(0, 1);
-
 wButton.onclick = () => movePlayer(0, -1);
 
 function movePlayer(di: number, dj: number) {
+  playerCell = {
+    i: playerCell.i + di,
+    j: playerCell.j + dj,
+  };
+
   playerLocation = leaflet.latLng(
-    playerLocation.lat + di * TILE_DEGREES,
-    playerLocation.lng + dj * TILE_DEGREES,
+    MAP_CENTER.lat + playerCell.i * TILE_DEGREES + TILE_DEGREES / 2,
+    MAP_CENTER.lng + playerCell.j * TILE_DEGREES + TILE_DEGREES / 2,
   );
   playerMarker.setLatLng(playerLocation);
 }
