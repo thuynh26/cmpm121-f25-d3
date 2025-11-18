@@ -50,10 +50,10 @@ Key gameplay challenge: Free map panning system also restricting cell interactio
 - [x] implement player movement in N, S, E, W directions
 - [x] anchor map grid at Null Island
 - [x] update marker to follow player position
-- [ ] introduce type alias for modeling grid cells
-- [ ] get bounds of map viewport
-- [ ] implement functions that converts i/j cell index to lat/lng
-- [ ] draw grid only in map view
+- [x] introduce type alias for modeling grid cells
+- [x] get bounds of map viewport
+- [x] implement functions that converts i/j cell index to lat/lng
+- [x] render grid only in map view
 - [ ]
 - [ ] update cell interaction rule to follow player position
 - [ ]

@@ -62,6 +62,7 @@ const map = leaflet.map(mapDiv, {
   maxZoom: GAMEPLAY_ZOOM_LVL,
   zoomControl: false,
   scrollWheelZoom: false,
+  dragging: true,
 });
 
 // adds a bkgd tile layer to map
@@ -72,6 +73,8 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 }).addTo(map);
 
 // ============================== MAP GRID ============================== //
+type GridIndex = { i: number; j: number };
+
 // Convert lat/lng to integer cell indices relative to MAP_CENTER
 function latLngToCell(lat: number, lng: number) {
   const i = Math.floor((lat - MAP_CENTER.lat) / TILE_DEGREES);
@@ -90,6 +93,33 @@ function cellBounds(i: number, j: number) {
   return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
 }
 
+function drawGrid() {
+  const bounds = map.getBounds();
+  const swCell = latLngToCell(bounds.getSouth(), bounds.getWest());
+  const neCell = latLngToCell(bounds.getNorth(), bounds.getEast());
+  console.log(swCell, neCell);
+
+  for (let i = swCell.i; i <= neCell.i; i++) {
+    for (let j = swCell.j; j <= neCell.j; j++) {
+      if (luck([i, j].toString()) < TOKEN_SPAWN_PROB) {
+        const nearby = isInRange(i, j);
+
+        const cell = leaflet.rectangle(cellBounds(i, j), {
+          weight: 1,
+          color: nearby ? "#2987dfff" : "#2f2b50ff",
+        });
+        cell.addTo(map);
+
+        const cellState = { tokenValue: spawnToken(i, j) };
+        const label = addTokenLabel(i, j, cellState.tokenValue);
+
+        // token "pick up" handler
+        cell.on("click", () => cellClickHandler(cell, i, j, cellState, label));
+      }
+    }
+  }
+}
+
 // ============================== INTERACTION SYSTEM ============================== //
 // map marker to represent the player
 let playerLocation = MAP_CENTER;
@@ -98,21 +128,13 @@ const playerCell = latLngToCell(playerLocation.lat, playerLocation.lng);
 const playerMarker = leaflet.marker(playerLocation);
 playerMarker.addTo(map).bindTooltip("That's you!");
 
-nButton.onclick = () => {
-  movePlayer(1, 0);
-};
+nButton.onclick = () => movePlayer(1, 0);
 
-sButton.onclick = () => {
-  movePlayer(-1, 0);
-};
+sButton.onclick = () => movePlayer(-1, 0);
 
-eButton.onclick = () => {
-  movePlayer(0, 1);
-};
+eButton.onclick = () => movePlayer(0, 1);
 
-wButton.onclick = () => {
-  movePlayer(0, -1);
-};
+wButton.onclick = () => movePlayer(0, -1);
 
 function movePlayer(di: number, dj: number) {
   playerLocation = leaflet.latLng(
@@ -221,23 +243,4 @@ function cellClickHandler(
 
 // ============================== BUILD CELLS ============================== //
 updateInventoryUI();
-
-for (let i = -GRID_SIZE / 2; i < GRID_SIZE / 2; i++) {
-  for (let j = -GRID_SIZE; j < GRID_SIZE; j++) {
-    if (luck([i, j].toString()) < TOKEN_SPAWN_PROB) {
-      const nearby = isInRange(i, j);
-
-      const cell = leaflet.rectangle(cellBounds(i, j), {
-        weight: 1,
-        color: nearby ? "#2987dfff" : "#2f2b50ff",
-      });
-      cell.addTo(map);
-
-      const cellState = { tokenValue: spawnToken(i, j) };
-      const label = addTokenLabel(i, j, cellState.tokenValue);
-
-      // token "pick up" handler
-      cell.on("click", () => cellClickHandler(cell, i, j, cellState, label));
-    }
-  }
-}
+drawGrid();
