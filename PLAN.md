@@ -54,8 +54,8 @@ Key gameplay challenge: Free map panning system also restricting cell interactio
 - [x] get bounds of map viewport
 - [x] implement functions that converts i/j cell index to lat/lng
 - [x] render grid only in map view
-- [ ] hook rendering to map interaction/location change
-- [ ] track cells that are on/off current map view
+- [x] hook rendering to map interaction/location change
+- [x] track cells that are on/off current map view
 - [ ] implement system to remove cells that are not in currnet view
 - [ ] "forget" off screen cell states
 - [ ] tweak player movement to center of cells (instead of on a corner)

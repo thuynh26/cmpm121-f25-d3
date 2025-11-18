@@ -70,9 +70,17 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 }).addTo(map);
 
 // ============================== MAP GRID ============================== //
-type GridIndex = { i: number; j: number };
+type CellId = string;
 
-map.on("moveend", drawGrid);
+type CellLayer = {
+  i: number;
+  j: number;
+  rect: leaflet.Rectangle;
+  label: leaflet.Marker;
+};
+
+// Map to track what layer a cell was rendered in using its id
+const mapLayers = new Map<CellId, CellLayer>();
 
 // Convert lat/lng to integer cell indices relative to MAP_CENTER
 function latLngToCell(lat: number, lng: number) {
@@ -92,31 +100,53 @@ function cellBounds(i: number, j: number) {
   return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
 }
 
+// redraw grid when map is moved
+map.on("moveend", drawGrid);
+
 function drawGrid() {
   const bounds = map.getBounds();
   const swCell = latLngToCell(bounds.getSouth(), bounds.getWest());
   const neCell = latLngToCell(bounds.getNorth(), bounds.getEast());
   console.log(swCell, neCell);
 
+  // track which cells have already been drawn
+  const seen = new Set<CellId>();
+
   for (let i = swCell.i; i <= neCell.i; i++) {
     for (let j = swCell.j; j <= neCell.j; j++) {
       if (luck([i, j].toString()) < TOKEN_SPAWN_PROB) {
+        seen.add(`${i},${j}`);
+        const id = `${i},${j}`;
         const nearby = isInRange(i, j);
 
-        const cell = leaflet.rectangle(cellBounds(i, j), {
-          weight: 1,
-          color: nearby ? "#2987dfff" : "#2f2b50ff",
-        });
-        cell.addTo(map);
+        let layer = mapLayers.get(id);
 
-        const cellState = { tokenValue: spawnToken(i, j) };
-        const label = addTokenLabel(i, j, cellState.tokenValue);
+        // only draw if not already drawn
+        if (!layer) {
+          const cell = leaflet.rectangle(cellBounds(i, j), {
+            weight: 1,
+            color: nearby ? "#2987dfff" : "#2f2b50ff",
+          });
+          cell.addTo(map);
 
-        // token "pick up" handler
-        cell.on("click", () => cellClickHandler(cell, i, j, cellState, label));
+          const cellState = { tokenValue: spawnToken(i, j) };
+          const label = addTokenLabel(i, j, cellState.tokenValue);
+
+          // store in mapLayers
+          layer = { i, j, rect: cell, label };
+          mapLayers.set(id, layer);
+
+          // token "pick up" handler
+          cell.on(
+            "click",
+            () => cellClickHandler(cell, i, j, cellState, label),
+          );
+        }
       }
     }
   }
+
+  // remove cells that are not in view
 }
 
 // ============================== INTERACTION SYSTEM ============================== //
@@ -243,4 +273,3 @@ function cellClickHandler(
 // ============================== BUILD CELLS ============================== //
 drawGrid();
 updateInventoryUI();
-
