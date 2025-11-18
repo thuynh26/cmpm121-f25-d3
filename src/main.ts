@@ -19,9 +19,6 @@ const GAMEPLAY_ZOOM_LVL = 19;
 const TILE_DEGREES = 1e-4;
 const TOKEN_SPAWN_PROB = 0.10;
 
-// temp for D3.a use (so that map covers viewable screen)
-const GRID_SIZE = 28;
-
 const PICKUP_RANGE = 3;
 const WIN_CONDITION = 16;
 
@@ -74,6 +71,8 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 // ============================== MAP GRID ============================== //
 type GridIndex = { i: number; j: number };
+
+map.on("moveend", drawGrid);
 
 // Convert lat/lng to integer cell indices relative to MAP_CENTER
 function latLngToCell(lat: number, lng: number) {
@@ -242,5 +241,6 @@ function cellClickHandler(
 }
 
 // ============================== BUILD CELLS ============================== //
-updateInventoryUI();
 drawGrid();
+updateInventoryUI();
+
