@@ -50,16 +50,21 @@ Key gameplay challenge: Free map panning system also restricting cell interactio
 - [x] implement player movement in N, S, E, W directions
 - [x] anchor map grid at Null Island
 - [x] update marker to follow player position
-- [x] introduce type alias for modeling grid cells
+- [x] introduce type alias for modeling grid cells and layers
 - [x] get bounds of map viewport
 - [x] implement functions that converts i/j cell index to lat/lng
 - [x] render grid only in map view
 - [x] hook rendering to map interaction/location change
 - [x] track cells that are on/off current map view
-- [ ] implement system to remove cells that are not in currnet view
+- [x] implement logic to remove cells that are not in currnet view
+- [ ] fix player marker (to be in center of cells instead of on a corner)
+- [ ] update cell interaction rule to follow player position as they move
 - [ ] "forget" off screen cell states
-- [ ] tweak player movement to center of cells (instead of on a corner)
-- [ ] update cell interaction rule to follow player position
-- [ ]
-  ...
+- [ ] re-entering a cell view resets to initial cell value
+- [ ] refactor map grid code
+- [ ] refactor click handler code
 - [ ] raise win condition value
+
+### D3.c
+
+#### Steps
