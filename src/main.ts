@@ -76,8 +76,9 @@ type CellState = { tokenValue: number };
 
 type CellLayer = {
   index: GridIndexes;
-  rect: leaflet.Rectangle;
+  cell: leaflet.Rectangle;
   label: leaflet.Marker;
+  state: CellState;
 };
 
 // Map to track what layer a cell was rendered in using its id
@@ -134,7 +135,7 @@ function spawnCell(atIndex: GridIndexes) {
   const id = `${atIndex.i},${atIndex.j}`;
   const nearby = isInRange(atIndex);
 
-  let layer = mapLayers.get(id);
+  const layer = mapLayers.get(id);
 
   // only draw cells if not already drawn
   if (!layer) {
@@ -144,21 +145,21 @@ function spawnCell(atIndex: GridIndexes) {
     });
     cell.addTo(map);
 
-    const cellState = { tokenValue: spawnToken(atIndex) };
-    const label = addTokenLabel(atIndex, cellState.tokenValue);
+    const state: CellState = { tokenValue: spawnToken(atIndex) };
+    const label = addTokenLabel(atIndex, state.tokenValue);
 
     // store in mapLayers
-    layer = { index: atIndex, rect: cell, label };
-    mapLayers.set(id, layer);
+    const thisLayer = { index: atIndex, cell: cell, label, state };
+    mapLayers.set(id, thisLayer);
 
     // token "pick up" handler
     cell.on(
       "click",
-      () => cellClickHandler(cell, atIndex, cellState, label),
+      () => cellClickHandler(thisLayer),
     );
   } else {
     // update cell style if player moves
-    layer.rect.setStyle({
+    layer.cell.setStyle({
       color: nearby ? "#2987dfff" : "#2f2b50ff",
     });
   }
@@ -167,7 +168,7 @@ function spawnCell(atIndex: GridIndexes) {
 function removeCell(id: CellId) {
   const layer = mapLayers.get(id);
   if (!layer) return;
-  layer.rect.remove();
+  layer.cell.remove();
   layer.label.remove();
   mapLayers.delete(id);
 }
@@ -182,7 +183,7 @@ function spawnToken(atIndex: GridIndexes) {
 function tokenIcon(value: number) {
   return leaflet.divIcon({
     className: "token-text",
-    html: value > 0 ? `<span class="token-pill">${value}</span>` : "0",
+    html: value > 0 ? `<span class="token-pill">${value}</span>` : "",
   });
 }
 
@@ -252,48 +253,49 @@ function checkWinCondit() {
   }
 }
 
-// ============================== HELPER FUNCTIONS ============================== //
+// ============================== CELL INTERACTION HANDLER ============================== //
 
-function cellClickHandler(
-  cell: leaflet.Rectangle,
-  atIndex: GridIndexes,
-  cellState: CellState,
-  label: leaflet.Marker,
-) {
-  if (!isInRange(atIndex)) {
-    cell.bindTooltip("Too far!");
+function cellClickHandler(layer: CellLayer) {
+  const { index, cell, label, state } = layer;
+
+  if (!isInRange(index)) {
+    cell.bindTooltip("Too far!").openTooltip();
     return;
   }
 
   // case: not holding anything -> pick up token
   if (holdToken == null) {
-    holdToken = cellState.tokenValue;
-    cellState.tokenValue = 0;
-    setTokenLabel(label, cellState.tokenValue);
-    updateInventoryUI(`Picked up ${holdToken}`);
+    if (state.tokenValue == 0) {
+      updateInventoryUI("Nothing to pick up here.");
+      return;
+    }
+    holdToken = state.tokenValue;
+    state.tokenValue = 0;
+    setTokenLabel(label, state.tokenValue);
+    updateInventoryUI(`Picked up ${holdToken}.`);
     return;
   }
 
   // case: holding a token already -> place on cell if EMPTY
-  if (cellState.tokenValue === 0) {
-    cellState.tokenValue = holdToken;
+  if (state.tokenValue === 0) {
+    state.tokenValue = holdToken;
     holdToken = null;
-    setTokenLabel(label, cellState.tokenValue);
-    updateInventoryUI(`Placed down ${cellState.tokenValue}`);
+    setTokenLabel(label, state.tokenValue);
+    updateInventoryUI(`Placed down ${state.tokenValue}.`);
     return;
   }
 
   // case: craft token (combine held token with ground token if same value)
-  if (holdToken === cellState.tokenValue) {
-    cellState.tokenValue = cellState.tokenValue * 2;
+  if (holdToken === state.tokenValue) {
+    state.tokenValue = state.tokenValue * 2;
     holdToken = null;
-    setTokenLabel(label, cellState.tokenValue);
-    updateInventoryUI(`Crafted new token: ${cellState.tokenValue}`);
+    setTokenLabel(label, state.tokenValue);
+    updateInventoryUI(`Crafted new token: ${state.tokenValue}.`);
     return;
   }
 
   // block picking up if values differ
-  updateInventoryUI(`Cell has ${cellState.tokenValue}. Need equal to craft.`);
+  updateInventoryUI(`Cell has ${state.tokenValue}. Need equal to craft.`);
 }
 
 // ============================== BUILD CELLS ============================== //
