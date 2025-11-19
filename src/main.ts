@@ -71,10 +71,11 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 // ============================== MAP GRID ============================== //
 type CellId = string;
+type GridIndexes = { i: number; j: number };
+type CellState = { tokenValue: number };
 
 type CellLayer = {
-  i: number;
-  j: number;
+  index: GridIndexes;
   rect: leaflet.Rectangle;
   label: leaflet.Marker;
 };
@@ -89,10 +90,10 @@ function latLngToCell(lat: number, lng: number) {
   return { i, j };
 }
 
-function cellBounds(i: number, j: number) {
+function cellBounds(atIndex: GridIndexes) {
   // SW corner (lower-left)
-  const lat0 = MAP_CENTER.lat + i * TILE_DEGREES;
-  const lng0 = MAP_CENTER.lng + j * TILE_DEGREES;
+  const lat0 = MAP_CENTER.lat + atIndex.i * TILE_DEGREES;
+  const lng0 = MAP_CENTER.lng + atIndex.j * TILE_DEGREES;
 
   // NE corner (upper-right)
   const lat1 = lat0 + TILE_DEGREES;
@@ -114,67 +115,97 @@ function drawGrid() {
 
   for (let i = swCell.i; i <= neCell.i; i++) {
     for (let j = swCell.j; j <= neCell.j; j++) {
+      const atIndex = { i, j };
+
       if (luck([i, j].toString()) < TOKEN_SPAWN_PROB) {
+        spawnCell(atIndex);
         seen.add(`${i},${j}`);
-        const id = `${i},${j}`;
-        const nearby = isInRange(i, j);
-
-        let layer = mapLayers.get(id);
-
-        // only draw cells if not already drawn
-        if (!layer) {
-          const cell = leaflet.rectangle(cellBounds(i, j), {
-            weight: 1,
-            color: nearby ? "#2987dfff" : "#2f2b50ff",
-          });
-          cell.addTo(map);
-
-          const cellState = { tokenValue: spawnToken(i, j) };
-          const label = addTokenLabel(i, j, cellState.tokenValue);
-
-          // store in mapLayers
-          layer = { i, j, rect: cell, label };
-          mapLayers.set(id, layer);
-
-          // token "pick up" handler
-          cell.on(
-            "click",
-            () => cellClickHandler(cell, i, j, cellState, label),
-          );
-        } else {
-          // update cell style if player moves
-          layer.rect.setStyle({
-            color: nearby ? "#2987dfff" : "#2f2b50ff",
-          });
-        }
       }
     }
   }
 
   // remove cells that are not in view
   for (const id of mapLayers.keys()) {
-    if (!seen.has(id)) {
-      const layer = mapLayers.get(id);
-      if (!layer) return;
-      layer.rect.remove();
-      layer.label.remove();
-      mapLayers.delete(id);
-
-      console.log(`Removed cell ${id}`);
-    }
+    if (!seen.has(id)) removeCell(id);
   }
+}
+
+function spawnCell(atIndex: GridIndexes) {
+  const id = `${atIndex.i},${atIndex.j}`;
+  const nearby = isInRange(atIndex);
+
+  let layer = mapLayers.get(id);
+
+  // only draw cells if not already drawn
+  if (!layer) {
+    const cell = leaflet.rectangle(cellBounds(atIndex), {
+      weight: 1,
+      color: nearby ? "#2987dfff" : "#2f2b50ff",
+    });
+    cell.addTo(map);
+
+    const cellState = { tokenValue: spawnToken(atIndex) };
+    const label = addTokenLabel(atIndex, cellState.tokenValue);
+
+    // store in mapLayers
+    layer = { index: atIndex, rect: cell, label };
+    mapLayers.set(id, layer);
+
+    // token "pick up" handler
+    cell.on(
+      "click",
+      () => cellClickHandler(cell, atIndex, cellState, label),
+    );
+  } else {
+    // update cell style if player moves
+    layer.rect.setStyle({
+      color: nearby ? "#2987dfff" : "#2f2b50ff",
+    });
+  }
+}
+
+function removeCell(id: CellId) {
+  const layer = mapLayers.get(id);
+  if (!layer) return;
+  layer.rect.remove();
+  layer.label.remove();
+  mapLayers.delete(id);
+}
+
+// ============================== TOKEN SYSTEM ============================== //
+function spawnToken(atIndex: GridIndexes) {
+  const spawnRoll = luck(`${atIndex.i},${atIndex.j}:value`);
+
+  return spawnRoll < 0.5 ? 2 : 4;
+}
+
+function tokenIcon(value: number) {
+  return leaflet.divIcon({
+    className: "token-text",
+    html: value > 0 ? `<span class="token-pill">${value}</span>` : "0",
+  });
+}
+
+function addTokenLabel(atIndex: GridIndexes, value: number): leaflet.Marker {
+  const center = cellBounds(atIndex).getCenter();
+
+  return leaflet.marker(center, {
+    interactive: false,
+    icon: tokenIcon(value),
+  }).addTo(map);
+}
+
+function setTokenLabel(label: leaflet.Marker, value: number) {
+  label.setIcon(tokenIcon(value));
 }
 
 // ============================== INTERACTION SYSTEM ============================== //
 // map marker to represent the player
 // spawn player at map center index
-let playerCell = { i: 0, j: 0 };
+let playerCell: GridIndexes = { i: 0, j: 0 };
 
 // put player in center of cell
-let playerLocation = leaflet.latLng(
-  MAP_CENTER.lat + playerCell.i * TILE_DEGREES + TILE_DEGREES / 2,
-  MAP_CENTER.lng + playerCell.j * TILE_DEGREES + TILE_DEGREES / 2,
-);
+let playerLocation = cellBounds(playerCell).getCenter();
 
 const playerMarker = leaflet.marker(playerLocation);
 playerMarker.addTo(map).bindTooltip("That's you!");
@@ -190,47 +221,17 @@ function movePlayer(di: number, dj: number) {
     j: playerCell.j + dj,
   };
 
-  playerLocation = leaflet.latLng(
-    MAP_CENTER.lat + playerCell.i * TILE_DEGREES + TILE_DEGREES / 2,
-    MAP_CENTER.lng + playerCell.j * TILE_DEGREES + TILE_DEGREES / 2,
-  );
+  playerLocation = cellBounds(playerCell).getCenter();
   playerMarker.setLatLng(playerLocation);
 
   drawGrid();
 }
 
-function isInRange(i: number, j: number) {
+function isInRange(atIndex: GridIndexes) {
   return (
-    Math.abs(i - playerCell.i) + Math.abs(j - playerCell.j) <= PICKUP_RANGE
+    Math.abs(atIndex.i - playerCell.i) + Math.abs(atIndex.j - playerCell.j) <=
+      PICKUP_RANGE
   );
-}
-
-// ============================== TOKEN SYSTEM ============================== //
-function spawnToken(i: number, j: number) {
-  const spawnRoll = luck(`${i},${j}:value`);
-
-  const value = spawnRoll < 0.5 ? 2 : 4;
-  return value;
-}
-
-function tokenIcon(value: number) {
-  return leaflet.divIcon({
-    className: "token-text",
-    html: value > 0 ? `<span class="token-pill">${value}</span>` : "0",
-  });
-}
-
-function addTokenLabel(i: number, j: number, value: number): leaflet.Marker {
-  const center = cellBounds(i, j).getCenter();
-
-  return leaflet.marker(center, {
-    interactive: false,
-    icon: tokenIcon(value),
-  }).addTo(map);
-}
-
-function setTokenLabel(label: leaflet.Marker, value: number) {
-  label.setIcon(tokenIcon(value));
 }
 
 // ============================== INVENTORY SYSTEM ============================== //
@@ -255,12 +256,11 @@ function checkWinCondit() {
 
 function cellClickHandler(
   cell: leaflet.Rectangle,
-  i: number,
-  j: number,
-  cellState: { tokenValue: number },
+  atIndex: GridIndexes,
+  cellState: CellState,
   label: leaflet.Marker,
 ) {
-  if (!isInRange(i, j)) {
+  if (!isInRange(atIndex)) {
     cell.bindTooltip("Too far!");
     return;
   }
