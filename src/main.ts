@@ -20,7 +20,7 @@ const TILE_DEGREES = 1e-4;
 const TOKEN_SPAWN_PROB = 0.10;
 
 const PICKUP_RANGE = 3;
-const WIN_CONDITION = 16;
+const WIN_CONDITION = 128;
 
 // ============================== UI ELEMENTS ============================== //
 const mapDiv = document.createElement("div");
@@ -37,15 +37,15 @@ sButton.innerHTML = "South";
 sButton.id = "buttons";
 document.body.append(sButton);
 
-const eButton = document.createElement("button");
-eButton.innerHTML = "East";
-eButton.id = "buttons";
-document.body.append(eButton);
-
 const wButton = document.createElement("button");
 wButton.innerHTML = "West";
 wButton.id = "buttons";
 document.body.append(wButton);
+
+const eButton = document.createElement("button");
+eButton.innerHTML = "East";
+eButton.id = "buttons";
+document.body.append(eButton);
 
 const inventoryDiv = document.createElement("div");
 inventoryDiv.id = "inventory";

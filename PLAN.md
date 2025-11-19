@@ -60,10 +60,10 @@ Key gameplay challenge: Free map panning system also restricting cell interactio
 - [x] fix player marker (to be in center of cells instead of on a corner)
 - [x] update cell interaction rule to follow player position as they move
 - [x] "forget" off screen cell states
-- [ ] re-entering a cell view resets to initial cell value
-- [ ] refactor map grid code
-- [ ] refactor click handler code
-- [ ] raise win condition value
+- [x] re-entering a cell view resets to initial cell value
+- [x] refactor map grid code
+- [x] refactor click handler code
+- [x] raise win condition value
 
 ### D3.c
 
