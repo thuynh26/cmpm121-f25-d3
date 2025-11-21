@@ -67,4 +67,16 @@ Key gameplay challenge: Free map panning system also restricting cell interactio
 
 ### D3.c
 
+Key technical challenge: Separate a cell's procedurally generated state from player made changes and preserve the state of modified cells by using Flyweight pattern.
+Key gameplay challenge: If a player changes a cell (by picking up, moving, or crafting tokens) that state should persist even if it is reloaded by using the Memento pattern.
+
 #### Steps
+
+- [] implement Flyweight class
+- [] define Memento for Memento pattern implementation
+- [] define Caretaker
+- [] define Originator
+- [] update spawn logic to call flyweight
+- [] route player actions/edits to Memento
+- [] rebuild visible cells each frame from Flyweight + Memento
+- []
