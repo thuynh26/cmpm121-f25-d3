@@ -81,6 +81,36 @@ type FlyweightCellLayer = {
 // Map to track what layer a cell was rendered in using its id
 const mapLayers = new Map<CellId, FlyweightCellLayer>();
 
+// Memento to store just the cell's current val
+type CellMemento = { value: number };
+
+// Memento caretaker that stores MODIFIED cells
+const CellMementoStore = new Map<CellId, CellMemento>();
+
+function getBaseVal(atIndex: GridIndexes) {
+  const spawns = luck([atIndex.i, atIndex.j].toString()) < TOKEN_SPAWN_PROB;
+  if (!spawns) return 0;
+  const val = luck(`${atIndex.i},${atIndex.j}:value`);
+  return val < 0.5 ? 2 : 4;
+}
+
+// Memento originator reads current val to override or set to base default
+function getCellValue(atIndex: GridIndexes): number {
+  const m = CellMementoStore.get([atIndex.i, atIndex.j].toString());
+  return m ? m.value : getBaseVal(atIndex);
+}
+
+// Memento originator writes to caretaker to store is val is different from base (has been altered)
+function setCellValue(atIndex: GridIndexes, val: number) {
+  const id = [atIndex.i, atIndex.j].toString();
+  const baseVal = getBaseVal(atIndex);
+  if (val === baseVal) {
+    CellMementoStore.delete(id);
+  } else {
+    CellMementoStore.set(id, { value: val });
+  }
+}
+
 // ============================== MAP GRID ============================== //
 type CellId = string;
 type GridIndexes = { i: number; j: number };
@@ -110,7 +140,6 @@ function drawGrid() {
   const bounds = map.getBounds();
   const swCell = latLngToCell(bounds.getSouth(), bounds.getWest());
   const neCell = latLngToCell(bounds.getNorth(), bounds.getEast());
-  console.log(swCell, neCell);
 
   // track which cells have already been drawn
   const seen = new Set<CellId>();
@@ -119,7 +148,7 @@ function drawGrid() {
     for (let j = swCell.j; j <= neCell.j; j++) {
       const atIndex = { i, j };
 
-      if (luck([i, j].toString()) < TOKEN_SPAWN_PROB) {
+      if (getBaseVal(atIndex) > 0 || CellMementoStore.has(`${i},${j}`)) {
         spawnCell(atIndex);
         seen.add(`${i},${j}`);
       }
@@ -148,22 +177,42 @@ function spawnCell(atIndex: GridIndexes) {
     });
     cell.addTo(map);
 
-    let currValue = getTokenVal(atIndex);
+    const labelVal = getCellValue(atIndex);
+    const label = labelVal > 0
+      ? leaflet.marker(center, {
+        interactive: false,
+        icon: tokenIcon(labelVal),
+      }).addTo(map)
+      : null;
 
     // store in map layers
-    layer = { index: atIndex, cell, label: null };
+    layer = { index: atIndex, cell, label };
     mapLayers.set(id, layer);
-    setTokenLabel(layer, currValue);
 
     // token "pick up" handler
-    cell.on("click", () => {
-      cellClickHandler(layer!, () => currValue, (v) => (currValue = v));
-    });
+    cell.on("click", () => cellClickHandler(layer!));
   } else {
-    // Update style/position when still on-screen
+    // Update style/position of in range cells when on screen
     layer.cell.setBounds(bounds);
     layer.cell.setStyle({ color: nearby ? "#2987dfff" : "#2f2b50ff" });
     if (layer.label) layer.label.setLatLng(center);
+
+    // update token labels
+    const cur = getCellValue(atIndex);
+    if (cur > 0) {
+      if (!layer.label) {
+        layer.label = leaflet.marker(center, {
+          interactive: false,
+          icon: tokenIcon(cur),
+        }).addTo(map);
+      } else {
+        layer.label.setLatLng(center);
+        layer.label.setIcon(tokenIcon(cur));
+      }
+    } else if (layer.label) {
+      layer.label.remove();
+      layer.label = null;
+    }
   }
 }
 
@@ -176,10 +225,12 @@ function removeCell(id: CellId) {
 }
 
 // ============================== TOKEN SYSTEM ============================== //
+/* taking out for now since token spawn is now handled by Memento pattern
 function getTokenVal(atIndex: GridIndexes) {
   const valueRoll = luck(`${atIndex.i},${atIndex.j}:value`);
   return valueRoll < 0.5 ? 2 : 4;
 }
+*/
 
 function tokenIcon(value: number) {
   return leaflet.divIcon({
@@ -263,11 +314,7 @@ function checkWinCondit() {
 
 // ============================== CELL INTERACTION HANDLER ============================== //
 
-function cellClickHandler(
-  layer: FlyweightCellLayer,
-  getValue: () => number,
-  setValue: (v: number) => void,
-) {
+function cellClickHandler(layer: FlyweightCellLayer) {
   const index = layer.index;
 
   if (!isInRange(index)) {
@@ -275,7 +322,7 @@ function cellClickHandler(
     return;
   }
 
-  let cur = getValue();
+  let cur = getCellValue(index);
 
   // case: not holding anything -> pick up token
   if (holdToken == null) {
@@ -285,7 +332,7 @@ function cellClickHandler(
     }
     holdToken = cur;
     cur = 0;
-    setValue(cur);
+    setCellValue(index, cur);
     setTokenLabel(layer, cur);
     updateInventoryUI(`Picked up ${holdToken}.`);
     return;
@@ -295,7 +342,7 @@ function cellClickHandler(
   if (cur === 0) {
     cur = holdToken;
     holdToken = null;
-    setValue(cur);
+    setCellValue(index, cur);
     setTokenLabel(layer, cur);
     updateInventoryUI(`Placed down ${cur}.`);
     return;
@@ -305,7 +352,7 @@ function cellClickHandler(
   if (holdToken === cur) {
     cur = cur * 2;
     holdToken = null;
-    setValue(cur);
+    setCellValue(index, cur);
     setTokenLabel(layer, cur);
     updateInventoryUI(`Crafted new token: ${cur}.`);
     return;

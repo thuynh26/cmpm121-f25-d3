@@ -73,10 +73,9 @@ Key gameplay challenge: If a player changes a cell (by picking up, moving, or cr
 #### Steps
 
 - [x] implement Flyweight pattern
-- [] define Memento for Memento pattern implementation
-- [] define Caretaker
-- [] define Originator
-- [] update spawn logic to call flyweight
-- [] route player actions/edits to Memento
-- [] rebuild visible cells each frame from Flyweight + Memento
-- []
+- [x] define Memento for Memento pattern implementation
+- [x] define Caretaker
+- [x] define Originator
+- [x] route player actions/edits to Memento
+- [] delete any no longer used code
+- [] refactor
