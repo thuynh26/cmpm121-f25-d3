@@ -69,20 +69,21 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 }).addTo(map);
 
-// ============================== MAP GRID ============================== //
-type CellId = string;
-type GridIndexes = { i: number; j: number };
-type CellState = { tokenValue: number };
-
-type CellLayer = {
-  index: GridIndexes;
-  cell: leaflet.Rectangle;
-  label: leaflet.Marker;
-  state: CellState;
+// ============================== FLYWEIGHT AND MEMENTO ============================== //
+// Flyweight holds only the coords and display objects
+// Token val is stored in the layer object itself
+type FlyweightCellLayer = {
+  index: GridIndexes; // intrrinsic
+  cell: leaflet.Rectangle; // extrinsic
+  label: leaflet.Marker | null; // extrinsic
 };
 
 // Map to track what layer a cell was rendered in using its id
-const mapLayers = new Map<CellId, CellLayer>();
+const mapLayers = new Map<CellId, FlyweightCellLayer>();
+
+// ============================== MAP GRID ============================== //
+type CellId = string;
+type GridIndexes = { i: number; j: number };
 
 // Convert lat/lng to integer cell indices relative to MAP_CENTER
 function latLngToCell(lat: number, lng: number) {
@@ -134,8 +135,10 @@ function drawGrid() {
 function spawnCell(atIndex: GridIndexes) {
   const id = `${atIndex.i},${atIndex.j}`;
   const nearby = isInRange(atIndex);
+  const bounds = cellBounds(atIndex);
+  const center = bounds.getCenter();
 
-  const layer = mapLayers.get(id);
+  let layer = mapLayers.get(id);
 
   // only draw cells if not already drawn
   if (!layer) {
@@ -145,23 +148,22 @@ function spawnCell(atIndex: GridIndexes) {
     });
     cell.addTo(map);
 
-    const state: CellState = { tokenValue: spawnToken(atIndex) };
-    const label = addTokenLabel(atIndex, state.tokenValue);
+    let currValue = getTokenVal(atIndex);
 
-    // store in mapLayers
-    const thisLayer = { index: atIndex, cell: cell, label, state };
-    mapLayers.set(id, thisLayer);
+    // store in map layers
+    layer = { index: atIndex, cell, label: null };
+    mapLayers.set(id, layer);
+    setTokenLabel(layer, currValue);
 
     // token "pick up" handler
-    cell.on(
-      "click",
-      () => cellClickHandler(thisLayer),
-    );
-  } else {
-    // update cell style if player moves
-    layer.cell.setStyle({
-      color: nearby ? "#2987dfff" : "#2f2b50ff",
+    cell.on("click", () => {
+      cellClickHandler(layer!, () => currValue, (v) => (currValue = v));
     });
+  } else {
+    // Update style/position when still on-screen
+    layer.cell.setBounds(bounds);
+    layer.cell.setStyle({ color: nearby ? "#2987dfff" : "#2f2b50ff" });
+    if (layer.label) layer.label.setLatLng(center);
   }
 }
 
@@ -169,15 +171,14 @@ function removeCell(id: CellId) {
   const layer = mapLayers.get(id);
   if (!layer) return;
   layer.cell.remove();
-  layer.label.remove();
+  if (layer.label) layer.label.remove();
   mapLayers.delete(id);
 }
 
 // ============================== TOKEN SYSTEM ============================== //
-function spawnToken(atIndex: GridIndexes) {
-  const spawnRoll = luck(`${atIndex.i},${atIndex.j}:value`);
-
-  return spawnRoll < 0.5 ? 2 : 4;
+function getTokenVal(atIndex: GridIndexes) {
+  const valueRoll = luck(`${atIndex.i},${atIndex.j}:value`);
+  return valueRoll < 0.5 ? 2 : 4;
 }
 
 function tokenIcon(value: number) {
@@ -187,17 +188,24 @@ function tokenIcon(value: number) {
   });
 }
 
-function addTokenLabel(atIndex: GridIndexes, value: number): leaflet.Marker {
-  const center = cellBounds(atIndex).getCenter();
-
-  return leaflet.marker(center, {
-    interactive: false,
-    icon: tokenIcon(value),
-  }).addTo(map);
-}
-
-function setTokenLabel(label: leaflet.Marker, value: number) {
-  label.setIcon(tokenIcon(value));
+function setTokenLabel(layer: FlyweightCellLayer, value: number) {
+  const center = cellBounds(layer.index).getCenter();
+  if (value > 0) {
+    if (!layer.label) {
+      layer.label = leaflet.marker(center, {
+        interactive: false,
+        icon: tokenIcon(value),
+      }).addTo(map);
+    } else {
+      layer.label.setLatLng(center);
+      layer.label.setIcon(tokenIcon(value));
+    }
+  } else {
+    if (layer.label) {
+      layer.label.remove();
+      layer.label = null;
+    }
+  }
 }
 
 // ============================== INTERACTION SYSTEM ============================== //
@@ -255,47 +263,56 @@ function checkWinCondit() {
 
 // ============================== CELL INTERACTION HANDLER ============================== //
 
-function cellClickHandler(layer: CellLayer) {
-  const { index, cell, label, state } = layer;
+function cellClickHandler(
+  layer: FlyweightCellLayer,
+  getValue: () => number,
+  setValue: (v: number) => void,
+) {
+  const index = layer.index;
 
   if (!isInRange(index)) {
-    cell.bindTooltip("Too far!").openTooltip();
+    layer.cell.bindTooltip("Too far!").openTooltip();
     return;
   }
 
+  let cur = getValue();
+
   // case: not holding anything -> pick up token
   if (holdToken == null) {
-    if (state.tokenValue == 0) {
+    if (cur == 0) {
       updateInventoryUI("Nothing to pick up here.");
       return;
     }
-    holdToken = state.tokenValue;
-    state.tokenValue = 0;
-    setTokenLabel(label, state.tokenValue);
+    holdToken = cur;
+    cur = 0;
+    setValue(cur);
+    setTokenLabel(layer, cur);
     updateInventoryUI(`Picked up ${holdToken}.`);
     return;
   }
 
   // case: holding a token already -> place on cell if EMPTY
-  if (state.tokenValue === 0) {
-    state.tokenValue = holdToken;
+  if (cur === 0) {
+    cur = holdToken;
     holdToken = null;
-    setTokenLabel(label, state.tokenValue);
-    updateInventoryUI(`Placed down ${state.tokenValue}.`);
+    setValue(cur);
+    setTokenLabel(layer, cur);
+    updateInventoryUI(`Placed down ${cur}.`);
     return;
   }
 
   // case: craft token (combine held token with ground token if same value)
-  if (holdToken === state.tokenValue) {
-    state.tokenValue = state.tokenValue * 2;
+  if (holdToken === cur) {
+    cur = cur * 2;
     holdToken = null;
-    setTokenLabel(label, state.tokenValue);
-    updateInventoryUI(`Crafted new token: ${state.tokenValue}.`);
+    setValue(cur);
+    setTokenLabel(layer, cur);
+    updateInventoryUI(`Crafted new token: ${cur}.`);
     return;
   }
 
   // block picking up if values differ
-  updateInventoryUI(`Cell has ${state.tokenValue}. Need equal to craft.`);
+  updateInventoryUI(`Cell has ${cur}. Need equal to craft.`);
 }
 
 // ============================== BUILD CELLS ============================== //

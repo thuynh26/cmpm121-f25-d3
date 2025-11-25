@@ -72,7 +72,7 @@ Key gameplay challenge: If a player changes a cell (by picking up, moving, or cr
 
 #### Steps
 
-- [] implement Flyweight class
+- [x] implement Flyweight pattern
 - [] define Memento for Memento pattern implementation
 - [] define Caretaker
 - [] define Originator
