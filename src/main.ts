@@ -51,6 +51,12 @@ const inventoryDiv = document.createElement("div");
 inventoryDiv.id = "inventory";
 document.body.append(inventoryDiv);
 
+// for testing gps and status readout
+const gpsDiv = document.createElement("div");
+gpsDiv.id = "gps-status";
+gpsDiv.textContent = "GPS: idle";
+document.body.append(gpsDiv);
+
 // ============================== LEAFLET MAP ============================== //
 const map = leaflet.map(mapDiv, {
   center: MAP_CENTER,
@@ -252,6 +258,68 @@ function removeCell(id: CellId) {
   if (layer.label) layer.label.remove();
   mapLayers.delete(id);
 }
+
+// ============================== GEOLOCATION SYSTEM ============================== //
+type GeoState = {
+  playerID: number | null;
+  lastCell: GridIndexes | null;
+  hadFix: boolean;
+};
+
+const playerGeo: GeoState = { playerID: null, lastCell: null, hadFix: false };
+
+/*
+watches and updates player location
+navigator.geolocation.watchPosition(success, error);
+^ parameters are functions
+*/
+
+function getGeolocation() {
+  if (!("geolocation" in navigator)) {
+    gpsDiv.textContent = "GPS: not supported -> using button movement.";
+    return;
+  }
+
+  gpsDiv.textContent = "GPS: requesting permission…";
+
+  playerGeo.playerID = navigator.geolocation.watchPosition(
+    (pos) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      const nowCell = latLngToCell(latitude, longitude);
+
+      // update gps status text on screen
+      gpsDiv.textContent = `GPS: fix (±${Math.round(accuracy)}m) at ( ${
+        latitude.toFixed(5)
+      }, ${longitude.toFixed(5)} ) --- cell ( ${nowCell.i}, ${nowCell.j} )`;
+
+      if (!playerGeo.hadFix) {
+        playerGeo.hadFix = true;
+        playerGeo.lastCell = nowCell;
+        setPlayerCell(nowCell);
+        return;
+      }
+
+      // update the player cell if move to new cell
+      if (
+        !playerGeo.lastCell || nowCell.i !== playerGeo.lastCell.i ||
+        nowCell.j !== playerGeo.lastCell.j
+      ) {
+        playerGeo.lastCell = nowCell;
+        setPlayerCell(nowCell);
+      }
+    },
+    (err) => {
+      gpsDiv.textContent =
+        `GPS: error (${err.code}) ${err.message} -> using button movement)`;
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 2000,
+      timeout: 10000,
+    },
+  );
+}
+
 // ============================== PLAYER SYSTEM ============================== //
 
 // spawn player at map center index
@@ -277,6 +345,14 @@ function movePlayer(di: number, dj: number) {
   playerLocation = cellBounds(playerCell).getCenter();
   playerMarker.setLatLng(playerLocation);
 
+  drawGrid();
+}
+
+function setPlayerCell(atIndex: GridIndexes) {
+  playerCell = atIndex;
+  playerLocation = cellBounds(playerCell).getCenter();
+  playerMarker.setLatLng(playerLocation);
+  map.panTo(playerLocation);
   drawGrid();
 }
 
@@ -369,6 +445,7 @@ function cellClickHandler(layer: FlyweightCellLayer) {
   updateInventoryUI(`Cell has ${cur}. Need equal to craft.`);
 }
 
-// ============================== BUILD CELLS ============================== //
+// ============================== ON GAME START UP ============================== //
+getGeolocation();
 drawGrid();
 updateInventoryUI();

@@ -87,13 +87,14 @@ Key gameplay challenge: Game state save accross gameplay sessions and way to sta
 
 #### Steps
 
-- [] implement browser geolocation API for location based movements
+- [x] implement browser geolocation API for location based movements
 - [] implement new player movement control system using the Facade design pattern
+- [] add buttons to toggle between geolocation and button gameplay movement
 - [] integrate browser localStorage API for game state to persist across page loads
 - [] add buttons to start new game
-- [] add buttons to toggle between geolocation and button gameplay movement
   ...
 - [] make some game tweaks
+  - [] add "WASD" and arrow keys as input for button movement move
   - [] move viewport with movement
   - [] fill entire screen with grid
   - [] move default player location to classroom
