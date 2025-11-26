@@ -82,8 +82,8 @@ Key gameplay challenge: If a player changes a cell (by picking up, moving, or cr
 
 ### D3.d: Gameplay Across Real-world Space and Time
 
-Key technical challenge: Modify system to use real world geolocation. Software can persist game state when closed to resume session.
-Key gameplay challenge: Game state save accross gameplay sessions and way to start a new game. Allow for switch between button and geolocation game movement.
+Key technical challenge: Modify system to use real world geolocation. New player movement system is hidden by using Facade design pattern. Software can persist game state when closed to resume session by using browser localStorage API.
+Key gameplay challenge: Player can move their character by moving their device around in the real world. Game state saves accross gameplay sessions and there is a way to start a new game. Game allows for switching between button and geolocation game movement.
 
 #### Steps
 
@@ -99,3 +99,4 @@ Key gameplay challenge: Game state save accross gameplay sessions and way to sta
   - [] fill entire screen with grid
   - [] move default player location to classroom
 - [] clean up and refactor code
+- [] clean up and reformat PLAN.md
