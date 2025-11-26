@@ -71,7 +71,6 @@ leaflet.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 // ============================== FLYWEIGHT AND MEMENTO ============================== //
 // Flyweight holds only the coords and display objects
-// Token val is stored in the layer object itself
 type FlyweightCellLayer = {
   index: GridIndexes; // intrrinsic
   cell: leaflet.Rectangle; // extrinsic
@@ -81,7 +80,7 @@ type FlyweightCellLayer = {
 // Map to track what layer a cell was rendered in using its id
 const mapLayers = new Map<CellId, FlyweightCellLayer>();
 
-// Memento to store just the cell's current val
+// Memento to store just the cell's current val when MODIFIED
 type CellMemento = { value: number };
 
 // Memento caretaker that stores MODIFIED cells
@@ -94,13 +93,13 @@ function getBaseVal(atIndex: GridIndexes) {
   return val < 0.5 ? 2 : 4;
 }
 
-// Memento originator reads current val to override or set to base default
+// Memento originator to read current val of a cell
 function getCellValue(atIndex: GridIndexes): number {
   const m = CellMementoStore.get([atIndex.i, atIndex.j].toString());
   return m ? m.value : getBaseVal(atIndex);
 }
 
-// Memento originator writes to caretaker to store is val is different from base (has been altered)
+// Memento originator writes to caretaker to store if val is different from base (has been altered)
 function setCellValue(atIndex: GridIndexes, val: number) {
   const id = [atIndex.i, atIndex.j].toString();
   const baseVal = getBaseVal(atIndex);
@@ -133,6 +132,36 @@ function cellBounds(atIndex: GridIndexes) {
   return leaflet.latLngBounds([lat0, lng0], [lat1, lng1]);
 }
 
+// ============================== TOKEN SYSTEM ============================== //
+
+function tokenIcon(value: number) {
+  return leaflet.divIcon({
+    className: "token-text",
+    html: value > 0 ? `<span class="token-pill">${value}</span>` : "",
+  });
+}
+
+function setTokenLabel(layer: FlyweightCellLayer, value: number) {
+  const center = cellBounds(layer.index).getCenter();
+  if (value > 0) {
+    if (!layer.label) {
+      layer.label = leaflet.marker(center, {
+        interactive: false,
+        icon: tokenIcon(value),
+      }).addTo(map);
+    } else {
+      layer.label.setLatLng(center);
+      layer.label.setIcon(tokenIcon(value));
+    }
+  } else {
+    if (layer.label) {
+      layer.label.remove();
+      layer.label = null;
+    }
+  }
+}
+
+// ============================== RENDER MAP ============================== //
 // redraw grid when map is moved
 map.on("moveend", drawGrid);
 
@@ -223,44 +252,8 @@ function removeCell(id: CellId) {
   if (layer.label) layer.label.remove();
   mapLayers.delete(id);
 }
+// ============================== PLAYER SYSTEM ============================== //
 
-// ============================== TOKEN SYSTEM ============================== //
-/* taking out for now since token spawn is now handled by Memento pattern
-function getTokenVal(atIndex: GridIndexes) {
-  const valueRoll = luck(`${atIndex.i},${atIndex.j}:value`);
-  return valueRoll < 0.5 ? 2 : 4;
-}
-*/
-
-function tokenIcon(value: number) {
-  return leaflet.divIcon({
-    className: "token-text",
-    html: value > 0 ? `<span class="token-pill">${value}</span>` : "",
-  });
-}
-
-function setTokenLabel(layer: FlyweightCellLayer, value: number) {
-  const center = cellBounds(layer.index).getCenter();
-  if (value > 0) {
-    if (!layer.label) {
-      layer.label = leaflet.marker(center, {
-        interactive: false,
-        icon: tokenIcon(value),
-      }).addTo(map);
-    } else {
-      layer.label.setLatLng(center);
-      layer.label.setIcon(tokenIcon(value));
-    }
-  } else {
-    if (layer.label) {
-      layer.label.remove();
-      layer.label = null;
-    }
-  }
-}
-
-// ============================== INTERACTION SYSTEM ============================== //
-// map marker to represent the player
 // spawn player at map center index
 let playerCell: GridIndexes = { i: 0, j: 0 };
 
@@ -314,6 +307,19 @@ function checkWinCondit() {
 
 // ============================== CELL INTERACTION HANDLER ============================== //
 
+function commitCellChange(
+  layer: FlyweightCellLayer,
+  index: GridIndexes,
+  newCellVal: number,
+  newHoldToken: number | null,
+  message: string,
+) {
+  setCellValue(index, newCellVal);
+  setTokenLabel(layer, newCellVal);
+  holdToken = newHoldToken;
+  updateInventoryUI(message);
+}
+
 function cellClickHandler(layer: FlyweightCellLayer) {
   const index = layer.index;
 
@@ -322,7 +328,7 @@ function cellClickHandler(layer: FlyweightCellLayer) {
     return;
   }
 
-  let cur = getCellValue(index);
+  const cur = getCellValue(index);
 
   // case: not holding anything -> pick up token
   if (holdToken == null) {
@@ -330,31 +336,32 @@ function cellClickHandler(layer: FlyweightCellLayer) {
       updateInventoryUI("Nothing to pick up here.");
       return;
     }
-    holdToken = cur;
-    cur = 0;
-    setCellValue(index, cur);
-    setTokenLabel(layer, cur);
-    updateInventoryUI(`Picked up ${holdToken}.`);
+    commitCellChange(layer, index, 0, cur, `Picked up ${cur}`);
     return;
   }
 
   // case: holding a token already -> place on cell if EMPTY
   if (cur === 0) {
-    cur = holdToken;
-    holdToken = null;
-    setCellValue(index, cur);
-    setTokenLabel(layer, cur);
-    updateInventoryUI(`Placed down ${cur}.`);
+    commitCellChange(
+      layer,
+      index,
+      holdToken!,
+      null,
+      `Placed down ${holdToken}.`,
+    );
     return;
   }
 
   // case: craft token (combine held token with ground token if same value)
   if (holdToken === cur) {
-    cur = cur * 2;
-    holdToken = null;
-    setCellValue(index, cur);
-    setTokenLabel(layer, cur);
-    updateInventoryUI(`Crafted new token: ${cur}.`);
+    const craftedToken = cur * 2;
+    commitCellChange(
+      layer,
+      index,
+      craftedToken,
+      null,
+      `Crafted new token: ${craftedToken}`,
+    );
     return;
   }
 

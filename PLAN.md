@@ -76,6 +76,6 @@ Key gameplay challenge: If a player changes a cell (by picking up, moving, or cr
 - [x] define Memento for Memento pattern implementation
 - [x] define Caretaker
 - [x] define Originator
-- [x] route player actions/edits to Memento
-- [] delete any no longer used code
-- [] refactor
+- [x] route player cell interactions to Memento
+- [x] delete any no longer used code
+- [x] refactor
