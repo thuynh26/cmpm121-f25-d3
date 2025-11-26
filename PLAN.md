@@ -79,3 +79,18 @@ Key gameplay challenge: If a player changes a cell (by picking up, moving, or cr
 - [x] route player cell interactions to Memento
 - [x] delete any no longer used code
 - [x] refactor
+
+### D3.d: Gameplay Across Real-world Space and Time
+
+Key technical challenge: Modify system to use real world geolocation. Software can persist game state when closed to resume session.
+Key gameplay challenge: Game state save accross gameplay sessions and way to start a new game. Allow for swtich between button and geolocation game movement.
+
+#### Steps
+
+- [] implement browser geolocation API for location based movements
+- [] implement new player movement control system using the Facade design pattern
+- [] integrate browser localStorage API for game state to persist across page loads
+- [] add buttons to start new game
+- [] ddd buttons to toggle between geolocation and button gameplay movement
+  ...
+- [] clean up and refactor code
