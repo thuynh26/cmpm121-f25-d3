@@ -88,8 +88,8 @@ Key gameplay challenge: Player can move their character by moving their device a
 #### Steps
 
 - [x] implement browser geolocation API for location based movements
-- [] implement new player movement control system using the Facade design pattern
-- [] add buttons to toggle between geolocation and button gameplay movement
+- [x] add button to toggle between geolocation and button gameplay movement
+- [x]] implement new player movement control system using the Facade design pattern
 - [] integrate browser localStorage API for game state to persist across page loads
 - [] add buttons to start new game
   ...

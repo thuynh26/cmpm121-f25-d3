@@ -57,6 +57,16 @@ gpsDiv.id = "gps-status";
 gpsDiv.textContent = "GPS: idle";
 document.body.append(gpsDiv);
 
+const toggleBtn = makeBtn("Switch to Buttons");
+
+function makeBtn(label: string) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.className = "nav-btn";
+  document.body.append(b);
+  return b;
+}
+
 // ============================== LEAFLET MAP ============================== //
 const map = leaflet.map(mapDiv, {
   center: MAP_CENTER,
@@ -259,67 +269,6 @@ function removeCell(id: CellId) {
   mapLayers.delete(id);
 }
 
-// ============================== GEOLOCATION SYSTEM ============================== //
-type GeoState = {
-  playerID: number | null;
-  lastCell: GridIndexes | null;
-  hadFix: boolean;
-};
-
-const playerGeo: GeoState = { playerID: null, lastCell: null, hadFix: false };
-
-/*
-watches and updates player location
-navigator.geolocation.watchPosition(success, error);
-^ parameters are functions
-*/
-
-function getGeolocation() {
-  if (!("geolocation" in navigator)) {
-    gpsDiv.textContent = "GPS: not supported -> using button movement.";
-    return;
-  }
-
-  gpsDiv.textContent = "GPS: requesting permission…";
-
-  playerGeo.playerID = navigator.geolocation.watchPosition(
-    (pos) => {
-      const { latitude, longitude, accuracy } = pos.coords;
-      const nowCell = latLngToCell(latitude, longitude);
-
-      // update gps status text on screen
-      gpsDiv.textContent = `GPS: fix (±${Math.round(accuracy)}m) at ( ${
-        latitude.toFixed(5)
-      }, ${longitude.toFixed(5)} ) --- cell ( ${nowCell.i}, ${nowCell.j} )`;
-
-      if (!playerGeo.hadFix) {
-        playerGeo.hadFix = true;
-        playerGeo.lastCell = nowCell;
-        setPlayerCell(nowCell);
-        return;
-      }
-
-      // update the player cell if move to new cell
-      if (
-        !playerGeo.lastCell || nowCell.i !== playerGeo.lastCell.i ||
-        nowCell.j !== playerGeo.lastCell.j
-      ) {
-        playerGeo.lastCell = nowCell;
-        setPlayerCell(nowCell);
-      }
-    },
-    (err) => {
-      gpsDiv.textContent =
-        `GPS: error (${err.code}) ${err.message} -> using button movement)`;
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 2000,
-      timeout: 10000,
-    },
-  );
-}
-
 // ============================== PLAYER SYSTEM ============================== //
 
 // spawn player at map center index
@@ -348,11 +297,19 @@ function movePlayer(di: number, dj: number) {
   drawGrid();
 }
 
-function setPlayerCell(atIndex: GridIndexes) {
-  playerCell = atIndex;
+function setPlayerCell(
+  iOrIndex: number | GridIndexes,
+  j?: number,
+  centerMap = false,
+) {
+  const next: GridIndexes = typeof iOrIndex === "number"
+    ? { i: iOrIndex, j: j! }
+    : iOrIndex;
+
+  playerCell = next;
   playerLocation = cellBounds(playerCell).getCenter();
   playerMarker.setLatLng(playerLocation);
-  map.panTo(playerLocation);
+  if (centerMap) map.panTo(playerLocation);
   drawGrid();
 }
 
@@ -444,6 +401,242 @@ function cellClickHandler(layer: FlyweightCellLayer) {
   // block picking up if values differ
   updateInventoryUI(`Cell has ${cur}. Need equal to craft.`);
 }
+
+// ============================== GEOLOCATION SYSTEM ============================== //
+type GeoState = {
+  playerID: number | null;
+  lastCell: GridIndexes | null;
+  hadFix: boolean;
+};
+
+const playerGeo: GeoState = { playerID: null, lastCell: null, hadFix: false };
+
+function getGeolocation() {
+  if (!("geolocation" in navigator)) {
+    gpsDiv.textContent = "GPS: not supported -> using button movement.";
+    return;
+  }
+
+  gpsDiv.textContent = "GPS: requesting permission…";
+
+  playerGeo.playerID = navigator.geolocation.watchPosition(
+    (pos) => {
+      const { latitude, longitude, accuracy } = pos.coords;
+      const nowCell = latLngToCell(latitude, longitude);
+
+      // update gps status text on screen
+      gpsDiv.textContent = `GPS: fix (±${Math.round(accuracy)}m) at ( ${
+        latitude.toFixed(5)
+      }, ${longitude.toFixed(5)} ) --- cell ( ${nowCell.i}, ${nowCell.j} )`;
+
+      if (!playerGeo.hadFix) {
+        playerGeo.hadFix = true;
+        playerGeo.lastCell = nowCell;
+        setPlayerCell(nowCell);
+        return;
+      }
+
+      // update the player cell if move to new cell
+      if (
+        !playerGeo.lastCell || nowCell.i !== playerGeo.lastCell.i ||
+        nowCell.j !== playerGeo.lastCell.j
+      ) {
+        playerGeo.lastCell = nowCell;
+        setPlayerCell(nowCell);
+      }
+    },
+    (err) => {
+      gpsDiv.textContent =
+        `GPS: error (${err.code}) ${err.message} -> using button movement)`;
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 2000,
+      timeout: 10000,
+    },
+  );
+}
+
+// ============================== MOVEMENT FACADE ============================== //
+interface MovementController {
+  readonly name: "geo" | "buttons";
+  start(): void;
+  stop(): void;
+  label(): string;
+}
+
+class ButtonMovementController implements MovementController {
+  readonly name = "buttons" as const;
+
+  private onN = () => this.bump(1, 0);
+  private onS = () => this.bump(-1, 0);
+  private onE = () => this.bump(0, 1);
+  private onW = () => this.bump(0, -1);
+
+  start() {
+    // Enable buttons
+    nButton.disabled =
+      sButton.disabled =
+      eButton.disabled =
+      wButton.disabled =
+        false;
+
+    // Wire handlers
+    nButton.addEventListener("click", this.onN);
+    sButton.addEventListener("click", this.onS);
+    eButton.addEventListener("click", this.onE);
+    wButton.addEventListener("click", this.onW);
+
+    gpsDiv.textContent = "Movement: Buttons (click N/S/E/W) or WASD";
+  }
+
+  stop() {
+    // Remove handlers
+    nButton.removeEventListener("click", this.onN);
+    sButton.removeEventListener("click", this.onS);
+    eButton.removeEventListener("click", this.onE);
+    wButton.removeEventListener("click", this.onW);
+
+    // Keep buttons enabled/disabled logic to facade (when switching)
+  }
+
+  label() {
+    return "Buttons";
+  }
+
+  private bump(di: number, dj: number) {
+    setPlayerCell(playerCell.i + di, playerCell.j + dj, /*center*/ false);
+  }
+}
+
+class GeoMovementController implements MovementController {
+  readonly name = "geo" as const;
+
+  private watchId: number | null = null;
+  private lastCell: GridIndexes | null = null;
+  private hadFix = false;
+
+  start() {
+    // Disable  buttons
+    nButton.disabled =
+      sButton.disabled =
+      eButton.disabled =
+      wButton.disabled =
+        true;
+
+    if (!("geolocation" in navigator)) {
+      gpsDiv.textContent = "GPS: not supported --- falling back to buttons";
+      return;
+    }
+
+    gpsDiv.textContent = "GPS: requesting permission…";
+    this.watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        const nowCell = latLngToCell(latitude, longitude);
+
+        gpsDiv.textContent = `GPS: fix (±${Math.round(accuracy)}m) at ${
+          latitude.toFixed(5)
+        }, ${longitude.toFixed(5)} → cell ${nowCell.i},${nowCell.j}`;
+
+        if (!this.hadFix) {
+          this.hadFix = true;
+          this.lastCell = nowCell;
+          setPlayerCell(nowCell, undefined, /*center*/ true);
+          return;
+        }
+
+        if (
+          !this.lastCell || nowCell.i !== this.lastCell.i ||
+          nowCell.j !== this.lastCell.j
+        ) {
+          this.lastCell = nowCell;
+          setPlayerCell(nowCell, undefined, /*center*/ false);
+        }
+      },
+      (err) => {
+        gpsDiv.textContent =
+          `GPS: error (${err.code}) ${err.message} → try Buttons mode`;
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 2000,
+        timeout: 10000,
+      },
+    );
+  }
+
+  stop() {
+    if (this.watchId != null) {
+      navigator.geolocation.clearWatch(this.watchId);
+      this.watchId = null;
+    }
+    this.lastCell = null;
+    this.hadFix = false;
+  }
+
+  label() {
+    return "Geolocation";
+  }
+}
+
+type MovementKind = "geo" | "buttons";
+
+class MovementFacade {
+  private current: MovementController | null = null;
+  private controllers: Record<MovementKind, MovementController>;
+
+  constructor() {
+    this.controllers = {
+      geo: new GeoMovementController(),
+      buttons: new ButtonMovementController(),
+    };
+  }
+
+  switchTo(kind: MovementKind) {
+    if (this.current?.name === kind) return; // already on that mode
+
+    this.current?.stop();
+    this.current = this.controllers[kind];
+    this.current.start();
+
+    // Update toggle button label to show the "other" mode
+    toggleBtn.textContent = this.current.name === "geo"
+      ? "Switch to Buttons"
+      : "Switch to GPS";
+
+    // If we switched to buttons, enable them; if geo, they're disabled in start()
+    if (kind === "buttons") {
+      nButton.disabled =
+        sButton.disabled =
+        eButton.disabled =
+        wButton.disabled =
+          false;
+    }
+  }
+
+  get mode(): MovementKind | null {
+    return this.current?.name ?? null;
+  }
+  get label(): string {
+    return this.current?.label() ?? "None";
+  }
+}
+
+function getMovementFromQuery(): MovementKind {
+  const params = new URLSearchParams(globalThis.location.search);
+  const m = params.get("movement");
+  return (m === "buttons" || m === "geo") ? m : "geo"; // default to GPS
+}
+
+const movement = new MovementFacade();
+movement.switchTo(getMovementFromQuery());
+
+// Toggle at runtime
+toggleBtn.addEventListener("click", () => {
+  const next: MovementKind = movement.mode === "geo" ? "buttons" : "geo";
+  movement.switchTo(next);
+});
 
 // ============================== ON GAME START UP ============================== //
 getGeolocation();
